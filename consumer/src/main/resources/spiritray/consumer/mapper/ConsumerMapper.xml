@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.consumer.mapper.ConsumerMapper">
+    <sql id="chanle">
+        <if test="address.isDefault>0">
+            UPDATE
+            address
+            SET
+            address.is_default = 0
+            WHERE
+            address.address_id IN
+            (
+            SELECT a.address_id
+            FROM
+            (SELECT address.address_id
+            FROM
+            address
+            WHERE
+            address.is_default = 1
+            ) AS a
+            );
+        </if>
+    </sql>
+
+    <insert id="insertConsumer">
+        INSERT INTO consumer
+        (
+            consumer.consumer_head,
+            consumer.consumer_nickname,
+            consumer.consumer_phone,
+            consumer.consumer_sex,
+            consumer.consumer_password
+        )
+        VALUES
+            (
+                #{consumer.consumerHead},
+                #{consumer.consumerNickname},
+                #{consumer.consumerPhone},
+                #{consumer.consumerSex},
+                #{consumer.consumerPassword}
+            );
+    </insert>
+
+    <insert id="insertAddress">
+        <include refid="chanle"></include>
+        INSERT INTO
+        address
+        (address_id, consumer_phone, address, take_name, take_phone,is_default)
+        VALUES
+        (#{address.addressId}, #{address.consumerPhone}, #{address.address}, #{address.takeName},
+        #{address.takePhone},#{address.isDefault});
+    </insert>
+
+    <update id="updateConsumer">
+        UPDATE consumer
+        <set>
+            <if test="consumer.consumerHead!=null">
+                consumer_head=#{consumer.consumerHead},
+            </if>
+            <if test="consumer.consumerNickname!=null">
+                consumer_nickname=#{consumer.consumerNickname},
+
+            </if>
+            <if test="consumer.consumerPassword!=null">
+                consumer_password=#{consumer.consumerPassword},
+            </if>
+            <if test="consumer.consumerSex!=null">
+                consumer_sex=#{consumer.consumerSex},
+            </if>
+        </set>
+        <where>
+            consumer_phone=#{consumer.consumerPhone}
+        </where>
+    </update>
+
+    <update id="updateAddressById">
+        <include refid="chanle"></include>
+        UPDATE
+        address
+        <set>
+            <if test="address.address!=null">
+                address=#{address.address},
+            </if>
+            <if test="address.takeName!=null">
+                take_name=#{address.takeName},
+            </if>
+            <if test="address.takePhone!=null">
+                take_phone=#{address.takePhone},
+            </if>
+            is_default=#{address.isDefault}
+        </set>
+        WHERE
+        address_id=#{address.addressId}
+        AND
+        consumer_phone=#{address.consumerPhone}
+    </update>
+
+    <delete id="deleteAddressById">
+        DELETE
+        FROM
+            address
+        WHERE
+            address.consumer_phone = #{phone}
+            AND
+            address.address_id = #{addressId};
+    </delete>
+
+    <select id="selectConsumerByConsumer" resultType="spiritray.common.pojo.PO.Consumer">
+        SELECT
+        consumer.consumer_head ,
+        consumer.consumer_nickname,
+        consumer.consumer_phone,
+        consumer.consumer_sex
+        FROM consumer
+        <where>
+            <if test="consumer.consumerPhone!=null">
+                consumer_phone=#{consumer.consumerPhone}
+            </if>
+            <if test="consumer.consumerPassword!=null">
+                AND consumer_password=#{consumer.consumerPassword}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectAddressByPhone" resultType="spiritray.common.pojo.PO.Address">
+        SELECT
+            address_id,
+            address,
+            take_name,
+            take_phone,
+            is_default
+        FROM
+            address
+        WHERE
+            consumer_phone = #{phone}
+        ORDER BY is_default DESC;
+    </select>
+
+</mapper>

@@ -1,0 +1,39 @@
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.log4j2.Log4j2Impl
+  mapper-locations: classpath:spiritray/seller/mapper/*.xml
+common-inf:
+  imgPath: "/static/seller/id"
+  realNameCode: "b4e2e0651fd44962ace2197c7d573ff7"
+  realNameUrl: "https://faceidcardb.shumaidata.com/getfaceidb"
+spring:
+  config:
+    import: classpath:application-dataSource.yaml
+#因为这个是一个springmvc前端拦截器，所以通过之后会将用户请求转换为映射的请求再次通过你自定义的拦截器，
+#所以如果你定义了拦截器但是没有对这部分资源进行放行，就会导致你还是无法访问到资源
+  mvc:
+    static-path-pattern: /static/**
+  redis:
+    host: localhost
+    port: 6379
+    lettuce:
+      pool:
+        max-active: 20
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+server:
+  port: 8081
+  address: 0.0.0.0
+
+#文件上传接口
+file:
+  upload:
+    interface:
+      FILE_UPLOAD_SIMPLE: "http://localhost:80/file/simple"
+      FILE_UPLOAD_MUL: "http://localhost:80/file/mul"
+
+
+
+

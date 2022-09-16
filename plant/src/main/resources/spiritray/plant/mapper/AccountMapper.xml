@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.plant.mapper.AccountMapper">
+    <insert id="insertAccount">
+        INSERT INTO
+            plant_account
+            (plant_account.acca_id, plant_account.app_id, plant_account.account_no, plant_account.account_key, plant_account.is_useable)
+        VALUES
+            (#{account.accaId}, #{account.appId}, #{account.accountNo}, #{account.accountKey},
+             #{account.isUseable})
+    </insert>
+
+    <update id="updateAccountCategoryById">
+        UPDATE
+            account_category
+        SET
+            is_open = #{cate.isOpen}
+        WHERE
+            acca_id = #{cate.accaId}
+    </update>
+
+    <update id="updateAccount">
+        UPDATE
+        plant_account
+        <set>
+            <if test="account.appId!=null">
+                plant_account.app_id=#{account.appId},
+            </if>
+            <if test="account.accountNo!=null">
+                plant_account.account_no=#{account.accountNo},
+            </if>
+            <if test="account.accountKey!=null">
+                plant_account.account_key=#{account.accountKey},
+            </if>
+            plant_account.is_useable=#{account.isUseable}
+        </set>
+        <where>
+            plant_account.pa_id = #{account.pa_id}
+        </where>
+    </update>
+
+    <delete id="deleteAccount">
+        DELETE FROM
+            plant_account
+        WHERE
+            plant_account.pa_id = #{paId}
+    </delete>
+
+    <select id="selectAccountCategory" resultType="spiritray.common.pojo.PO.AccountCategory">
+        SELECT
+            ac.acca_id,
+            ac.is_open
+        FROM
+            account_category AS ac
+        ORDER BY ac.acca_id
+    </select>
+
+    <select id="selectAccount" resultType="spiritray.common.pojo.PO.PlantAccount">
+        SELECT *
+        FROM
+        plant_account
+        <where>
+            acca_id=#{cate}
+            <if test="type==1">
+                AND is_useable=0
+            </if>
+            <if test="type==2">
+                AND is_useable=1
+            </if>
+        </where>
+    </select>
+</mapper>

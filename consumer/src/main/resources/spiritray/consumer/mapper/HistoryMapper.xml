@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.consumer.mapper.HistoryMapper">
+    <insert id="insertHisOne">
+        INSERT INTO
+            look_his
+            (look_his.commodity_id, look_his.consumer_phone, look_his.start_date, look_his.look_time)
+        VALUES
+            (#{lookHis.commodityId}, #{lookHis.consumerPhone}, NOW(), #{lookHis.lookTime})
+    </insert>
+
+    <update id="updateHisByPhoneAndCommodityId">
+        UPDATE
+            look_his
+        SET look_time = #{his.lookTime}, start_date = NOW()
+        WHERE
+            commodity_id = #{his.commodityId}
+            AND
+            consumer_phone = #{his.consumerPhone}
+    </update>
+
+    <delete id="deleteHisByPhoneAndCommodityId">
+        DELETE
+        FROM
+            look_his
+        WHERE
+            commodity_id = #{commodityId}
+            AND
+            consumer_phone = #{phone}
+    </delete>
+
+    <select id="selectLookRecentlyLong" resultType="java.lang.String">
+        SELECT commodity_id
+        FROM
+            look_his
+        WHERE
+            consumer_phone = #{phone}
+        ORDER BY look_his.start_date, look_his.look_time
+        LIMIT 0, #{num}
+    </select>
+
+    <select id="selectHisByPhoneAndCommodityId" resultType="spiritray.common.pojo.PO.History">
+        SELECT *
+        FROM
+            look_his
+        WHERE
+            commodity_id = #{commodityId}
+            AND
+            consumer_phone = #{phone}
+    </select>
+</mapper>

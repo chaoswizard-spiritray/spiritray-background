@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.order.mapper.OrderMapper">
+
+    <insert id="insertOrder">
+        INSERT INTO
+            `order`
+            (`order`.order_number, `order`.consumer_phone, `order`.total_amount, `order`.order_date)
+        VALUES
+            (#{order.orderNumber}, #{order.consumerPhone}, #{order.totalAmount}, NOW())
+    </insert>
+
+    <update id="updateOrderNoDetail">
+        UPDATE `order`
+        SET `order`.is_delete = 1
+        WHERE
+            `order`.order_number IN (
+                SELECT od.order_number
+                FROM
+                    (
+                        SELECT
+                            `order`.order_number,
+                            COUNT(*) AS num
+                        FROM
+                            `order`
+                            JOIN order_detail ON `order`.order_number = order_detail.order_number
+                        WHERE
+                            order_detail.is_delete = 0
+                        GROUP BY
+                            `order`.order_number
+                    ) od
+                WHERE
+                    od.num = 0
+            )
+    </update>
+</mapper>

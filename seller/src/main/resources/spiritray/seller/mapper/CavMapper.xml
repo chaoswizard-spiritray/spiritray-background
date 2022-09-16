@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.CavMapper">
+    <sql id="selectCavByCommodityId">
+        SELECT
+            attribute_name,
+            attribute_value
+        FROM
+            cav
+        WHERE
+            commodity_id = #{commodityId}
+    </sql>
+
+    <insert id="insertCavS">
+        INSERT INTO
+        cav
+        (commodity_id,
+        attribute_id,
+        attribute_value
+        )
+        VALUES
+        <foreach collection="cavs" item="cav" separator=",">
+            (#{cav.commodityId},
+            #{cav.attributeId},
+            #{cav.attributeValue})
+        </foreach>
+    </insert>
+
+    <select id="selectCategoryById" resultType="spiritray.common.pojo.PO.Category">
+        SELECT
+            category_id,
+            category_name,
+            father
+        FROM category
+        WHERE father = #{id}
+    </select>
+
+    <select id="selectAttributeByCategoryId" resultType="spiritray.common.pojo.PO.Attribute">
+        SELECT
+            attribute_id,
+            attribute_name,
+            is_mul
+        FROM attribute
+        WHERE category_id = #{categoryId}
+    </select>
+
+    <select id="selectCavByCommodityId" resultType="spiritray.common.pojo.DTO.SSMap">
+        SELECT
+            attribute.attribute_name AS attributeName,
+            cav.attribute_value AS attributeValue
+        FROM
+            cav
+            JOIN attribute
+                ON
+                    cav.attribute_id = attribute.attribute_id
+        WHERE
+            attribute.is_mul = #{isMul}
+            AND
+            cav.commodity_id = #{commodityId}
+    </select>
+
+    <select id="selectAllCavCommodityId" resultType="spiritray.common.pojo.PO.Cav">
+        <include refid="selectCavByCommodityId"></include>
+    </select>
+</mapper>

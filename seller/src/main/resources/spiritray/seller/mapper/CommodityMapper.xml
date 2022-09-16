@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.CommodityMapper">
+    <sql id="inchecksimple">
+        SELECT
+            co.commodity_id,
+            commodity_name,
+            master_map,
+            ch.info  AS check_info,
+            ch.state AS check_state
+        FROM commodity AS co
+            JOIN
+            (SELECT
+                 cc.info          AS info,
+                 cc.state         AS state,
+                 ch1.commodity_id AS commodity_id
+             FROM
+                 check_info AS ch1
+                 JOIN check_code AS cc
+                     ON
+                         ch1.check_code = cc.check_code) AS ch
+                ON co.commodity_id = ch.commodity_id
+    </sql>
+
+    <insert id="insertCommodity">
+        INSERT INTO commodity
+        (commodity_id, store_id, category_id, commodity_name, shipping, master_map, commodity_describe, address, publish_date)
+        VALUES
+            (#{commodity.commodityId}, #{commodity.storeId}, #{commodity.categoryId}, #{commodity.commodityName},
+             #{commodity.shipping}, #{commodity.masterMap}, #{commodity.commodityDescribe}, #{commodity.address},
+             CURDATE())
+    </insert>
+
+    <update id="updateCommodityState">
+        UPDATE
+            commodity
+        SET
+            status_code = #{state}
+        WHERE
+            commodity_id = #{commodityId}
+    </update>
+
+    <select id="selectInSellSimpleByStoreId" resultType="spiritray.common.pojo.DTO.InSellSimple">
+        SELECT
+            commodity.commodity_id,
+            commodity.commodity_name,
+            commodity.master_map,
+            DATEDIFF(CURDATE(), check_info.check_date) AS inSellDay
+        FROM commodity
+            JOIN check_info
+                ON commodity.commodity_id = check_info.commodity_id
+        WHERE
+            store_id = #{storeId}
+            AND
+            status_code = 1
+    </select>
+
+    <select id="selectInSellDetailByCommodityId" resultType="spiritray.common.pojo.DTO.InSellDetail">
+        SELECT
+            commodity_id,
+            commodity_name,
+            ca.category_name AS category_name,
+            master_map,
+            commodity_describe,
+            address,
+            publish_date
+        FROM commodity AS co
+            JOIN category AS ca
+                ON co.category_id = ca.category_id
+        WHERE
+            co.commodity_id = #{commodityId}
+            AND
+            co.is_publish = 1;
+    </select>
+
+    <select id="selectInCheckSimpleByStoreId" resultType="spiritray.common.pojo.DTO.InCheckSimple">
+        <include refid="inchecksimple"></include>
+        WHERE
+        store_id = #{storeId}
+        AND
+        co.status_code = 0;
+    </select>
+
+    <select id="selectNoSellSimpleByStoreId" resultType="spiritray.common.pojo.DTO.NoSellSimple">
+
+        SELECT
+            commodity_id,
+            commodity_name,
+            master_map,
+            down_date,
+            down_commotion
+        FROM commodity
+        WHERE
+            store_id = #{storeId}
+            AND
+            is_publish = -1
+    </select>
+
+    <select id="selectCommodityConsumerSimple" resultType="spiritray.common.pojo.DTO.CommodityConsumerSimple"
+            timeout="1">
+        SELECT
+        co.commodity_id,
+        co.commodity_name,
+        co.commodity_describe,
+        co.master_map,
+        SUBSTRING_INDEX(c.price, ";", 1) AS price
+        FROM
+        commodity AS co
+        JOIN (
+        SELECT
+        cav.commodity_id,
+        cav.price
+        FROM
+        cav
+        WHERE
+        cav.price IS NOT NULL
+        ) AS c ON co.commodity_id = c.commodity_id
+        <where>
+            <if test="condition.keyWord!=null">
+                co.commodity_name LIKE '%'+${condition.keyWord}+'%' OR co.commodity_describe LIKE
+                '%'+${condition.keyWord}+'%'
+            </if>
+            <if test="condition.sortName!=null">
+                ORDER BY #{condition.sortName}
+            </if>
+            <if test="condition.sortRule!=null">
+                #{condition.sortRule}
+            </if>
+            LIMIT #{condition.page},#{condition.pageNum};
+        </where>
+    </select>
+
+    <select id="selectInCheckDetailByCommodityId" resultType="spiritray.common.pojo.DTO.InCheckDetail">
+        SELECT
+            cl.*,
+            cc.info  AS check_info,
+            cc.state AS check_state
+        FROM
+            (SELECT
+                 co.commodity_id,
+                 co.commodity_name,
+                 co.master_map,
+                 ci.apply_date,
+                 ci.check_code,
+                 ci.check_date,
+                 ci.remark,
+                 ci.staff_id
+             FROM
+                 (SELECT
+                      commodity_id,
+                      commodity_name,
+                      master_map
+                  FROM
+                      commodity
+                  WHERE
+                      commodity_id = #{commodityId}
+                      AND
+                      store_id = #{storeId}) AS co
+                 JOIN check_info ci
+                     ON
+                         co.commodity_id = ci.commodity_id) AS cl
+            JOIN check_code cc
+                ON
+                    cl.check_code = cc.check_code;
+    </select>
+
+    <select id="selectCommoditySimpleByCheckState" resultType="spiritray.common.pojo.DTO.CommoditySimple">
+        SELECT
+            commodity_id,
+            store_id,
+            master_map,
+            commodity_name
+        FROM
+            commodity
+        WHERE
+            commodity_id IN
+            (SELECT commodity_id
+             FROM
+                 check_info
+             WHERE check_code IN
+                   (SELECT check_code
+                    FROM
+                        check_code
+                    WHERE
+                        check_code.state = #{state}))
+    </select>
+
+    <select id="selectAllCommodityId" resultType="java.lang.String">
+        SELECT commodity_id
+        FROM
+            commodity
+    </select>
+
+    <select id="selectCommodityName" resultType="java.lang.String">
+        SELECT commodity_name
+        FROM
+        commodity
+        WHERE
+        (
+        <foreach collection="ids" separator="," item="id">
+            id
+        </foreach>
+        )
+    </select>
+</mapper>

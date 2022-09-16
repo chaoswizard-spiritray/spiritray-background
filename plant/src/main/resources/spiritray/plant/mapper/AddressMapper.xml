@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.plant.mapper.AddressMapper">
+
+    <select id="selectProvinceAll" resultType="spiritray.common.pojo.DTO.NSMap">
+        SELECT
+            tl_province.ProvinceID   AS `key`,
+            tl_province.ProvinceName AS `value`
+        FROM
+            tl_province
+        ORDER BY `key`
+    </select>
+
+    <select id="selectCityByProvinceId" resultType="spiritray.common.pojo.DTO.NSMap">
+        SELECT
+            tl_city.CityID   AS `key`,
+            tl_city.CityName AS `value`
+        FROM
+            tl_city
+        WHERE
+            tl_city.ProvinceID = #{provinceId}
+        ORDER BY `key`;
+    </select>
+
+    <select id="selectDistrictByCityId" resultType="spiritray.common.pojo.DTO.NSMap">
+        SELECT
+            tl_district.DistrictID   AS `key`,
+            tl_district.DistrictName AS `value`
+        FROM
+            tl_district
+        WHERE
+            tl_district.CityID = #{cityId}
+        ORDER BY `key`;
+    </select>
+
+    <select id="selectProvinceSimple" resultType="spiritray.common.pojo.DTO.NSMap">
+        SELECT
+            tl_province.ProvinceID   AS `key`,
+            tl_province.ProvinceName AS `value`
+        FROM
+            tl_province
+        WHERE
+            tl_province.ProvinceID = #{provinceId};
+    </select>
+
+    <select id="selectCitySimple" resultType="spiritray.common.pojo.DTO.NSMap">
+        SELECT
+            tl_city.CityID   AS `key`,
+            tl_city.CityName AS `value`
+        FROM
+            tl_city
+        WHERE
+            tl_city.CityID = #{cityId};
+    </select>
+
+    <select id="selectDistrictSimple" resultType="spiritray.common.pojo.DTO.NSMap">
+        SELECT
+            tl_district.DistrictID   AS `key`,
+            tl_district.DistrictName AS `value`
+        FROM
+            tl_district
+        WHERE
+            tl_district.DistrictID = #{disId};
+    </select>
+</mapper>

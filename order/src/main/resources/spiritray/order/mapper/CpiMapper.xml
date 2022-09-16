@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.order.mapper.CpiMapper">
+
+    <insert id="insertCpi">
+        INSERT INTO
+            cpi
+            (cpi.cpi_id, cpi.yungou_no, cpi.pay_no, cpi.acca_id, cpi.plant_account, cpi.pay_money, cpi.pay_date)
+        VALUES
+            (#{cpi.cpiId}, #{cpi.yungouNo}, #{cpi.payNo}, #{cpi.accaId}, #{cpi.plantAccount}, #{cpi.payMoney}, NOW())
+    </insert>
+</mapper>

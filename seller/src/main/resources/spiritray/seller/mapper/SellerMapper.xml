@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.SellerMapper">
+    <insert id="insertSeller">
+        INSERT INTO seller VALUES (#{seller.sellerId},#{seller.sellerName},#{seller.sellerPhone},#{seller.sellerPath});
+    </insert>
+
+
+    <select id="selectPhoneByPhone" resultType="java.lang.Long">
+        SELECT seller_phone
+        FROM seller
+        WHERE seller_phone=#{phone};
+    </select>
+</mapper>

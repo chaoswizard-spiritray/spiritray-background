@@ -1,0 +1,65 @@
+https://www.cnblogs.com/wumz/p/10769968.html
+
+
+1、前后端分离：
+    请求跨域问题：----https://blog.csdn.net/qq_36968599/article/details/114878483----
+    Access to XMLHttpRequest at 'http://localhost:8080/consumer/register'
+    from origin 'http://localhost:4200' has been blocked by CORS
+    policy: Response to preflight request doesn't pass access control
+    check: No 'Access-Control-Allow-Origin' header is present on the
+    requested resource.
+    跨域请求不是说不响应，会响应数据，只是被浏览器拦截了，
+    是否拦截是通过Allow-Cors-Origin这个请求头进行判定
+    跨域请求是否允许取决于服务器端进行控制，所以如果要允许，
+    你可以采用在web服务直接进行配置，如果是分布式集群，
+    往往要统一设置，如果使用的nginx反向代理、网关，
+    那么可以修改其配置文件进行域名放行
+    如果你使用的是微服务的zuul或者其他的网关，同样可以进行配置。
+    分布式集群，一般在你通过网关后就是网关代替你访问资源，
+    那么也就是同源访问了。
+
+    前后端DTO问题：可以将传输的数据临时封装为集合实例，也可以自己封装一个类。
+
+    前端为什么不能正常展示后端生成的验证码：
+    为什么angular的异步请求会自动将后端数据转换为一个对象，所以后端如果要自己直接输出一个JSON字符串，那么对象的属性名不能用""，但是字符串值需要。
+    为什么ｉｍｇ可以自动将ｂａｓｅ６４转换为图片，因为内嵌了图片解码器，只要你的图片字节流中指定了解析的参数，那么ｉｍｇ能够自动解析。
+
+    为什么持续发送请求，验证码不会更换，这里就是那个有意思的问题了，测试环境为浏览器环境
+    刚开始我没加timestamp，点击验证码刷新的时候只能触发一次，
+    后来了解到 在URL中加时间戳就会保证每一次发起的请求都是一个不同于之前的请求,这样就能避免浏览器对URL的缓存。
+    new HttpHeaders({ "Cache-Control": "no-cache", "Pragma": "no-cache", "Expires": "0" }) }取消缓存
+
+    我们不应该自己设置header的Content-Type属性。因为组件已经正确使用边界设置header。
+    如果我们自己设置了那个header，组件和服务器不知道期望的边界（因为它被添加到header中）。
+    删除header中自定义的Content-Type属性，就好了
+
+2、mybtis的字段映射问题：resultMap就是将查询出来的字段按照名字与应用程序中的PO对象属性进行映射
+
+3、日志级别：DEBUG
+           ERROR
+           FATAL
+           INFO
+           OFF
+           TRACE
+           WARN
+
+
+4、No value accessor for form control
+    with unspecified name attribute Error:
+    No value accessor for form control with unspecified name attribute
+    -::对于具有未指定名称属性的表单控件，没有值访问器
+    -::因为ngModel：双向数据绑定，我们无法指定绑定到组件的具体属性上，
+        所以，所以需要通过ngDefaultControl来帮助我们识别组件默认双向绑定能够绑定的属性，否则无法绑定
+
+5、获取项目类路径方法：
+    		System.out.println(ResourceUtils.getURL("classpath:").getPath());
+
+    		System.out.println(ClassUtils.getDefaultClassLoader().getResource("").getPath());
+
+
+
+6.spring boot无法注入对象，因为当spring容器加载各个bean时，拦截器应当是一个servlet，会先加载，当加载时发现自动注入注解，然后在容器中寻找能够注入的对象，
+   如果找到了就注入。但是这个时候其他的bean还没有加载到容器中，所以找不到，如果要想成功注入，可以将拦截器注册到spring中，那么拦截器就会延迟加载。
+
+
+8、 //注意！！！！因为前端是直接将数据库中的jwt进行取出来然后进行传递，且缓存中存储的JSON字符串，所以带有",必须要去除掉，不然JWT验证失败

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.consumer.mapper.CartMapper">
+    <insert id="insertCart">
+        INSERT INTO
+            cart
+            (cart.commodity_id, cart.commodity_num, cart.commodity_name, cart.consumer_phone, cart.sku_value, cart.sku_map, cart.total_fee)
+        VALUES
+            (#{cart.commodityId}, #{cart.commodityNum}, #{cart.commodityName}, #{cart.consumerPhone}, #{cart.skuValue},
+             #{cart.skuMap},
+             #{cart.totalFee})
+    </insert>
+
+    <delete id="deleteCart">
+        DELETE FROM
+            cart
+        WHERE
+            cart.cart_id = #{cartId}
+    </delete>
+
+    <delete id="deleteAll">
+        DELETE FROM
+            cart
+        WHERE cart.consumer_phone = #{cart.consumerPhone}
+    </delete>
+
+    <select id="selectCartByPhone" resultType="spiritray.common.pojo.PO.Cart">
+        SELECT *
+        FROM
+            cart
+        WHERE
+            consumer_phone = #{phone}
+    </select>
+</mapper>

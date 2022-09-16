@@ -1,0 +1,47 @@
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.log4j2.Log4j2Impl
+  mapper-locations: classpath:spiritray/consumer/mapper/*.xml
+common-inf:
+  imgPath: "/static/consumer/head"
+  sellerSeviceUrl: "http://localhost:8081"
+spring:
+  config:
+    import: classpath:application-dataSource.yaml
+  redis:
+    host: localhost
+    port: 6379
+    lettuce:
+      pool:
+        max-active: 20
+#因为这个是一个springmvc前端拦截器，所以通过之后会将用户请求转换为映射的请求再次通过你自定义的拦截器，
+#所以如果你定义了拦截器但是没有对这部分资源进行放行，就会导致你还是无法访问到资源
+  mvc:
+    static-path-pattern: /static/**
+#邮件发送参数
+  mail:
+    host: smtp.qq.com #smtp服务器域名
+    username: 1790926041@qq.com #发送方邮箱号
+    password: uurswyaswwycbgej #发送方授权码
+    properties:
+      mail:
+        smtp:
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+    default-encoding: utf-8
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+server:
+  port: 8080
+  address: 0.0.0.0
+
+#文件上传接口
+file:
+  upload:
+    interface:
+      FILE_UPLOAD_SIMPLE: "http://localhost:80/file/simple"
+      FILE_UPLOAD_MUL: "http://localhost:80/file/mul"
+
+

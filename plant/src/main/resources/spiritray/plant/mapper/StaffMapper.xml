@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.plant.mapper.StaffMapper">
+    <select id="selectMailByStaffId" resultType="java.lang.String">
+        SELECT mail
+        FROM staff
+        WHERE staff_id = #{staffId};
+    </select>
+
+</mapper>

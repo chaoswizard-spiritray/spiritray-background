@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.order.mapper.OrderDetailMapper">
+
+    <insert id="insertOrderDetail">
+        INSERT INTO order_detail (
+        order_detail.order_number,
+        order_detail.od_id,
+        order_detail.store_id,
+        order_detail.commodity_id,
+        order_detail.sku_value,
+        order_detail.sku_map,
+        order_detail.commodity_num,
+        order_detail.total_amount,
+        order_detail.address_msg,
+        order_detail.state
+        )
+        VALUES
+        <foreach collection="orderDetails" item="orderDetail" separator=",">
+            (
+            #{orderDetail.orderNumber},
+            #{orderDetail.odId},
+            #{orderDetail.storeId},
+            #{orderDetail.commodityId},
+            #{orderDetail.skuValue},
+            #{orderDetail.skuMap},
+            #{orderDetail.commodityNum},
+            #{orderDetail.totalAmount},
+            #{orderDetail.addressMsg},
+            0
+            )
+        </foreach>
+    </insert>
+
+    <update id="updateDetailByOrderNum">
+        UPDATE
+            order_detail
+        SET
+            state = #{state}
+        WHERE
+            order_detail.order_number = #{orderNumber}
+    </update>
+
+    <update id="updateDetailStateById">
+        UPDATE
+            order_detail
+        SET
+            state = #{state}
+        WHERE
+            order_detail.order_number = #{orderNumber}
+            AND
+            order_detail.od_id = #{odId}
+    </update>
+
+    <update id="updateDetailDeleteById">
+        UPDATE
+            order_detail
+        SET
+            is_delete = 1,
+            WHERE
+            order_number = #{orderNumber}
+            AND
+            od_id = #{odId}
+    </update>
+
+    <select id="selectDetailStateById" resultType="java.lang.Integer">
+        SELECT state
+        FROM
+            order_detail
+        WHERE
+            order_detail.order_number = #{orderNumber}
+            AND
+            order_detail.od_id = #{odId}
+    </select>
+
+    <select id="selectDetailStateByOrderNumber" resultType="java.lang.Integer">
+        SELECT state
+        FROM
+            order_detail
+        WHERE
+            order_detail.order_number = #{orderNumber}
+        LIMIT 0, 1
+    </select>
+
+    <select id="selectOrderSkuByOrderId" resultType="java.util.Map">
+        SELECT
+            od.commodity_id  AS commodityId,
+            od.sku_value     AS skuValue,
+            od.commodity_num AS num
+        FROM
+            order_detail AS od
+        WHERE
+            od.order_number = #{orderNumber}
+            AND
+            od.od_id = #{odId}
+    </select>
+
+
+    <select id="selectOrderDetailByPhoneAndState" resultType="spiritray.common.pojo.PO.OrderDetail">
+        SELECT order_detail.*
+        FROM
+        order_detail JOIN `order`
+        ON
+        `order`.order_number=order_detail.order_number
+        WHERE
+        `order`.consumer_phone=#{phone}
+        <if test="state==0 or state==1 or state==2">
+            AND order_detail.state=#{state}
+        </if>
+        <if test="state==3">
+            AND order_detail.state>=#{state}
+        </if>
+    </select>
+</mapper>

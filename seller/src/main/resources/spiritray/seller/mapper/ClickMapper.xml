@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.ClickMapper">
+    <insert id="insertClick">
+        INSERT INTO
+            click
+            (click.click_no, click.commodity_id, click.click_num, click.click_date)
+        VALUES
+            (#{click.clickNo}, #{click.commodityId}, #{click.clickNum}, NOW())
+    </insert>
+
+    <select id="selectCommodityIdByCommodityId" resultType="java.lang.String">
+        SELECT commodity_id
+        FROM
+            click
+        WHERE
+            commodity_id = #{commodityId}
+    </select>
+</mapper>

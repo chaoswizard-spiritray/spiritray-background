@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.StoreMapper">
+    <sql id="closeAccountCollection">
+        <if test="account.isCollections>0">
+            # 取消原来的收款账户
+            UPDATE
+            account_seller
+            SET
+            is_collections = 0
+            WHERE
+            store_id = #{account.storeId}
+            AND
+            is_collections = 1
+            AND
+            acca_id=#{account.accaId};
+        </if>
+    </sql>
+
+    <insert id="insertStore">
+        INSERT INTO
+            store
+            (store_id, seller_id, store_name, store_head, `status`)
+        VALUES
+            (#{store.storeId}, #{store.sellerId}, #{store.storeName}, #{store.storeHead}, #{store.status});
+    </insert>
+
+    <insert id="insertLicenseByStoreId">
+        INSERT INTO
+        license
+        (store_id, license_url)
+        VALUES
+        <foreach collection="urls" item="url" separator=",">
+            (#{storeId}, #{url})
+        </foreach>
+    </insert>
+
+    <insert id="insertAccount">
+        <include refid="closeAccountCollection"></include>
+        INSERT INTO
+        account_seller
+        (store_id, account_name, account_no, acca_id,is_collections)
+        VALUES
+        (#{account.storeId},#{account.accountName}, #{account.accountNo}, #{account.accaId},#{account.isCollections});
+    </insert>
+
+    <update id="updateStore">
+        UPDATE
+        store
+        <if test="store.storeName!=null">
+            <set>
+                store_name=#{store.storeName},
+            </set>
+        </if>
+        <if test="store.storeHead!=null">
+            <set>
+                store_head=#{store.storeHead},
+            </set>
+        </if>
+        <where>
+            <if test="store.storeId!=null">
+                store_id=#{store.storeId}
+            </if>
+            AND `status`=1
+        </where>
+    </update>
+
+    <update id="updateStoreStatusByStoreId">
+        UPDATE
+        store
+        SET status=#{status}
+        <if test="causeInf!=null">
+            ,SET close_cause=#{causeInf},
+            SET close_date=now()
+        </if>
+        <where>
+            store_id=#{store.storeId}
+        </where>
+    </update>
+
+    <update id="updateAccount">
+        <include refid="closeAccountCollection"></include>
+        #更新账户信息
+        UPDATE
+        account_seller
+        <set>
+            <if test="account.isCollections>0">
+                is_collections = 1,
+            </if>
+            <if test="account.isCollections==0">
+                is_collections = 0,
+            </if>
+            <if test="account.accountNo!=null">
+                account_no=#{account.accountNo},
+            </if>
+            <if test="account.accountName">
+                account_name=#{account.accountName},
+            </if>
+        </set>
+        WHERE account_id =#{account.accountId}
+        AND store_id=#{account.storeId}
+
+    </update>
+
+    <delete id="deleteAccount">
+        DELETE
+        FROM
+            account_seller
+        WHERE
+            account_seller.account_id = #{accountId}
+            AND
+            account_seller.store_id = #{storeId}
+    </delete>
+
+
+    <select id="selectStoreByPhone" resultType="spiritray.common.pojo.PO.Store">
+        SELECT
+            store_id,
+            store_name,
+            store_head,
+            `status`
+        FROM
+            store
+        WHERE
+            seller_id = (
+                SELECT seller_id AS si
+                FROM
+                    seller
+                WHERE
+                    seller_phone = #{phone}
+            )
+    </select>
+
+    <select id="selectStoreHeadById" resultType="java.lang.String">
+        SELECT store_head
+        FROM
+            store
+        WHERE
+            store_id = #{storeId}
+            AND
+            `status` = 1
+    </select>
+
+    <select id="selectCloseInfById" resultType="spiritray.common.pojo.PO.Store">
+        SELECT
+            `status`,
+            close_date,
+            close_cause
+        FROM
+            store
+        WHERE
+            store_id = #{storeId}
+    </select>
+
+    <select id="selectLicenseByStoreId" resultType="java.lang.String">
+        SELECT license_url
+        FROM
+            license
+        WHERE
+            store_id = #{storeId}
+    </select>
+
+    <select id="selectSellerAccountByStoreId" resultType="spiritray.common.pojo.PO.SellerAccount">
+        SELECT
+            account_seller.account_id,
+            account_seller.account_no,
+            account_seller.account_name,
+            account_seller.acca_id,
+            account_seller.is_collections
+        FROM
+            account_seller
+        WHERE
+            account_seller.store_id = #{storeId}
+            AND
+            account_seller.acca_id = #{accaId}
+        ORDER BY account_seller.is_collections DESC
+    </select>
+
+    <select id="selectAccountCollectionByStoreIdAndAccaId" resultType="spiritray.common.pojo.PO.SellerAccount">
+        SELECT
+            account_id,
+            acca_id,
+            account_num,
+            is_collections
+        FROM
+            account_seller
+        WHERE
+            acca_id = #{accaId}
+            AND
+            store_id = #{storeId}
+            AND
+            is_collections = 1
+    </select>
+
+    <select id="selectStoreByStoreId" resultType="spiritray.common.pojo.PO.Store">
+        SELECT
+            store_id,
+            store_name,
+            store_head,
+            `status`
+        FROM
+            store
+        WHERE
+            store_id = #{storeId}
+    </select>
+</mapper>

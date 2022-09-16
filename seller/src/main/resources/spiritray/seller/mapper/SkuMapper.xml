@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.SkuMapper">
+
+    <insert id="insertSkus">
+        INSERT INTO
+        sku
+        (sku.commodity_id,sku.sku_value,sku.sku_map,sku.sku_price,sku.num)
+        VALUES
+        <foreach collection="skus" item="sku" separator=",">
+            (#{sku.commodityId},#{sku.skuValue},#{sku.skuMap},#{sku.skuPrice},#{sku.num})
+        </foreach>
+    </insert>
+
+    <update id="updateSkuNumByCommodityAndSku">
+        UPDATE
+        sku
+        <if test="isSub==1">
+            SET sku.num = sku.num - #{num}
+        </if>
+        <if test="isSub==0">
+            SET sku.num = sku.num + #{num}
+        </if>
+        WHERE
+        sku.commodity_id = #{commodityId}
+        AND sku.sku_value = #{skuValue}
+    </update>
+
+    <select id="selectSkuByCommodityId" resultType="spiritray.common.pojo.PO.Sku">
+        SELECT *
+        FROM
+            sku
+        WHERE
+            sku.commodity_id = #{commodityId}
+    </select>
+
+    <!--where后面的语句以and或者or开头的时候，where标签会自动删除开头的and和or-->
+    <select id="selectCheckOrderInfoByCommodityId" resultType="spiritray.common.pojo.BO.CheckOrderInfo">
+        SELECT
+            co.store_id,
+            co.commodity_id,
+            co.shipping,
+            sku.sku_value,
+            sku.sku_map,
+            sku.sku_price
+        FROM
+            sku
+            JOIN commodity AS co ON sku.commodity_id = co.commodity_id
+        WHERE
+            sku.commodity_id = #{ssMap.attributeName}
+            AND sku.sku_value = #{ssMap.attributeValue}
+    </select>
+
+    <select id="selectSkuNumByCommodityAndSku" resultType="java.lang.Integer">
+        SELECT sku.num
+        FROM
+            sku
+        WHERE
+            sku.commodity_id = #{commodityId}
+            AND sku.sku_value = #{skuValue}
+    </select>
+</mapper>
