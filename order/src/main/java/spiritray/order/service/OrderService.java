@@ -5,7 +5,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import spiritray.common.pojo.DTO.OrderBeforeCommodity;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.PO.Address;
+import spiritray.common.pojo.PO.OrderDetail;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.List;
 
@@ -25,12 +28,15 @@ public interface OrderService {
     /*验证并保存订单，以及订单拆分*/
     public RpsMsg generateOrderAndDetail(List<OrderBeforeCommodity> commodities, Address address, String orderId, int payCate, long comsumerPhone, String jwt);
 
-    /*订单付款*/
-    public RpsMsg orderPay(String orderNum, int odId);
-
     /*查询订单状态*/
     public RpsMsg queryStateByOrderNumber(String orderNumber);
 
     /*查询信息订单*/
     public RpsMsg getOrder(long phone, int state);
+
+    /*修改指定订单号和订单细节的订单细节记录*/
+    public RpsMsg modifyOrderDetailAddressByOrderNumberAndOdId(String orderNumber, int odId, String address, HttpServletRequest request);
+
+    /*取消指定未发货的订单细节记录*/
+    public RpsMsg chanelOrderDetail(HttpServletResponse response, String orderNumber, int odId, long phone, String jwt);
 }

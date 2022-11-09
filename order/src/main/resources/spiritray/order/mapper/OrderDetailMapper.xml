@@ -56,11 +56,51 @@
         UPDATE
             order_detail
         SET
-            is_delete = 1,
-            WHERE
+            is_delete = 1
+        WHERE
             order_number = #{orderNumber}
             AND
             od_id = #{odId}
+    </update>
+
+    <update id="updateDetailAddress">
+        UPDATE
+            order_detail
+        SET
+            order_detail.address_msg = #{address}
+        WHERE
+            order_detail.od_id = #{odId}
+            AND order_detail.is_delete = 0
+            AND
+            order_detail.order_number IN
+            (
+                SELECT `order`.order_number
+                FROM
+                    `order`
+                WHERE `order`.consumer_phone = #{phone}
+                      AND `order`.is_delete = 0
+                      AND `order`.order_number = #{orderNumber}
+            )
+    </update>
+
+    <update id="updateDetailDeleteByIdAndPhone">
+        UPDATE
+            order_detail
+        SET
+            order_detail.is_delete = 1
+        WHERE
+            order_detail.od_id = #{odId}
+            AND order_detail.is_delete = 0
+            AND
+            order_detail.order_number IN
+            (
+                SELECT `order`.order_number
+                FROM
+                    `order`
+                WHERE `order`.consumer_phone = #{phone}
+                      AND `order`.is_delete = 0
+                      AND `order`.order_number = #{orderNumber}
+            )
     </update>
 
     <select id="selectDetailStateById" resultType="java.lang.Integer">
@@ -99,16 +139,35 @@
     <select id="selectOrderDetailByPhoneAndState" resultType="spiritray.common.pojo.PO.OrderDetail">
         SELECT order_detail.*
         FROM
-        order_detail JOIN `order`
-        ON
-        `order`.order_number=order_detail.order_number
+            order_detail
+            JOIN `order`
+                ON
+                    `order`.order_number = order_detail.order_number
         WHERE
-        `order`.consumer_phone=#{phone}
-        <if test="state==0 or state==1 or state==2">
-            AND order_detail.state=#{state}
-        </if>
-        <if test="state==3">
-            AND order_detail.state>=#{state}
-        </if>
+            `order`.consumer_phone = #{phone}
+            AND order_detail.state = #{state}
+            AND order_detail.is_delete = 0
+    </select>
+
+    <select id="selectOrderDetailPaidByOrderNumber" resultType="java.lang.Integer">
+        SELECT od_id
+        FROM
+            order_detail
+        WHERE
+            order_detail.order_number = #{orderNumber}
+            AND
+            order_detail.state > 0;
+    </select>
+
+    <select id="selectDetailTotalAmountById" resultType="java.lang.Float">
+        SELECT order_detail.total_amount
+        FROM
+            order_detail
+        WHERE
+            order_detail.order_number = #{orderNumber}
+            AND
+            order_detail.od_id = #{odId}
+            AND
+            order_detail.state = 0;
     </select>
 </mapper>

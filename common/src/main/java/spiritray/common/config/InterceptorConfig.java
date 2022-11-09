@@ -10,23 +10,13 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import spiritray.common.interceptor.JWTInterceptor;
-import spiritray.common.interceptor.PlatInterceptor;
-import spiritray.common.interceptor.SessionKeepInterceptor;
-import spiritray.common.interceptor.StoreInterceptor;
+import spiritray.common.interceptor.*;
 import spiritray.common.pojo.BO.CommonInf;
 import spiritray.common.pojo.BO.ExcludeUriAndMethod;
 import spiritray.common.pojo.BO.FileUploadInterface;
 import spiritray.common.pojo.DTO.SSMap;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 
 /**
  * ClassName:InterceptorConfig
@@ -56,10 +46,10 @@ public class InterceptorConfig implements WebMvcConfigurer {
         return new HashMap<>();
     }
 
-    //退款失败任务集合
+    //退款失败任务集合https://segmentfault.com/a/1190000041364081,注意这个需要保证线程安全，因为读写共享,我们使用Java自提供的线程安全的数组
     @Bean("backFail")
     public List<SSMap> getBackTask() {
-        return new ArrayList<>();
+        return Collections.synchronizedList(new ArrayList<>());
     }
 
     @Bean
@@ -93,6 +83,11 @@ public class InterceptorConfig implements WebMvcConfigurer {
     @Bean("storeInterceptor")
     public StoreInterceptor getStoreInterceptor() {
         return new StoreInterceptor();
+    }
+
+    @Bean("platAccountInterceptor")
+    public PlantAccountInterceptor getPlatAccountInterceptor() {
+        return new PlantAccountInterceptor();
     }
 
     @Bean("platInterceptor")
@@ -137,12 +132,20 @@ public class InterceptorConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/store/storeInf/phone")
                 .excludePathPatterns("/store/storeLicenseSimple/**")
                 .addPathPatterns("/commodity/**")
+                .excludePathPatterns("/commodity/commodityName/**")
+                .excludePathPatterns("/commodity/order/**")
                 .excludePathPatterns("/commodity/consumer/**")
                 .excludePathPatterns("/commodity/plat/check/**")
                 .excludePathPatterns("/consumer/cart/**");
-        ;
+        //添加plat账户查询拦截器
+        registry.addInterceptor(getPlatAccountInterceptor())
+                .addPathPatterns("/plant/account/**")
+                .excludePathPatterns("/plant/account/category/**")
+                .excludePathPatterns("/plant/account/cate/**");
+
         //添加plat拦截器
         registry.addInterceptor(getPlatInterceptor())
                 .addPathPatterns("/commodity/plat/check/**");
+
     }
 }

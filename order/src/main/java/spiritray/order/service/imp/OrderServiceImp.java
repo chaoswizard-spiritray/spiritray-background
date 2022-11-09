@@ -15,17 +15,20 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import spiritray.common.pojo.BO.AliAppPayParam;
 import spiritray.common.pojo.BO.CheckOrderInfo;
-import spiritray.common.pojo.BO.WechatAppPayParam;
 import spiritray.common.pojo.DTO.OrderBeforeCommodity;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SSMap;
-import spiritray.common.pojo.PO.*;
+import spiritray.common.pojo.PO.Address;
+import spiritray.common.pojo.PO.Order;
+import spiritray.common.pojo.PO.OrderDetail;
 import spiritray.order.mapper.OrderDetailMapper;
 import spiritray.order.mapper.OrderMapper;
 import spiritray.order.service.OrderService;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -65,12 +68,16 @@ public class OrderServiceImp implements OrderService {
 
     private final String SELLER_URL = "http://localhost:8081";
 
+    private final String ORDER_URL = "http://localhost:8082";
+
     private final String PLANT_URL = "http://localhost:8083";
+
+    private final String Order_KEY_PREFIX = "order";//redis订单细节编号为key的前缀
 
     @Override
     public RpsMsg generateOrderToken() {
         //生成一个UUID
-        String orderToken = String.valueOf(UUID.randomUUID());
+        String orderToken = UUID.randomUUID().toString();
         //添加到redis
         redisTemplate.opsForSet().add("orderToken", orderToken);
         //添加定时检测到集合
@@ -95,9 +102,6 @@ public class OrderServiceImp implements OrderService {
         HttpEntity httpEntity = new HttpEntity(multiValueMap, headers);
         List<Address> checkAddresses = (List<Address>) restTemplate.exchange(CONSUMER_URL + "/consumer/info/addresses", HttpMethod.GET, httpEntity, RpsMsg.class).getBody().getData();
         checkAddresses = JSONObject.parseArray(JSON.toJSONString(checkAddresses)).toJavaList(Address.class);
-        //获取有效支付方式
-        List<AccountCategory> accountCategories = (List<AccountCategory>) restTemplate.exchange(PLANT_URL + "/plant/account/category", HttpMethod.GET, httpEntity, RpsMsg.class).getBody().getData();
-        accountCategories = JSONObject.parseArray(JSON.toJSONString(accountCategories)).toJavaList(AccountCategory.class);
         boolean isAccess = false;
         for (int i = 0; i < checkAddresses.size(); i++) {
             if (checkAddresses.get(i).getAddressId().equals(address.getAddressId())) {
@@ -107,114 +111,69 @@ public class OrderServiceImp implements OrderService {
         }
         if (!isAccess) {
             //如果地址信息不存在
-            return new RpsMsg().setStausCode(300).setMsg("地址信息被篡改");
+            return new RpsMsg().setStausCode(300).setMsg("请选择已有地址信息");
+        }
+        //封装参数
+        List<SSMap> checkParam = new ArrayList<>();
+        List<Integer> commodityNums = new ArrayList<>();
+        for (OrderBeforeCommodity commodity : commodities) {
+            SSMap ssMap = new SSMap();
+            ssMap.setAttributeName(commodity.getCommodityId()).setAttributeValue(commodity.getSku().getSkuValue());
+            checkParam.add(ssMap);
+            commodityNums.add(commodity.getCommodityNum());
+        }
+        multiValueMap.add("commodities", JSON.toJSONString(checkParam));
+        multiValueMap.add("commodityNums", JSON.toJSONString(commodityNums));
+        httpEntity = new HttpEntity(multiValueMap, headers);
+        //获取商品规格信息
+        ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(SELLER_URL + "/sku/checkorder", HttpMethod.PUT, httpEntity, RpsMsg.class);
+        List<CheckOrderInfo> checkOrderInfos = JSONObject.parseArray(JSON.toJSONString(responseEntity.getBody().getData())).toJavaList(CheckOrderInfo.class);
+        if (checkOrderInfos.size() != commodities.size()) {
+            return new RpsMsg().setMsg("商品信息不存在");
+        }
+        //减少商品指定规格数量
+        responseEntity = restTemplate.exchange(SELLER_URL + "/sku/sub", HttpMethod.PUT, httpEntity, RpsMsg.class);
+        if (responseEntity.getStatusCode().is5xxServerError()) {
+            return new RpsMsg().setStausCode(300).setMsg("所选商品数量不足");
+        }
+        if (responseEntity.getBody().getStausCode() != 200) {
+            return responseEntity.getBody();
         } else {
-            //验证支付类型
-            for (AccountCategory accountCategory : accountCategories) {
-                if (accountCategory.accaId == payCate && accountCategory.isOpen == 0) {
-                    isAccess = false;
-                } else if (accountCategory.accaId == payCate && accountCategory.isOpen == 1) {
-                    break;
+            float totalFee = 0;//所有商品总计费用
+            //生成订单细节
+            List<OrderDetail> orderDetails = new ArrayList<>();
+            for (int i = 0; i < checkOrderInfos.size(); i++) {
+                OrderDetail orderDetail = new OrderDetail();
+                orderDetail.setStoreId(checkOrderInfos.get(i).getStoreId()).setCommodityId(checkOrderInfos.get(i).getCommodityId())
+                        .setOrderNumber(orderId).setOdId(i).setAddressMsg(JSONObject.toJSONString(address))
+                        .setSkuValue(checkOrderInfos.get(i).getSkuValue()).setSkuMap(checkOrderInfos.get(i).getSkuMap());
+                //调整数目计算每个商品小计
+                for (OrderBeforeCommodity commodity : commodities) {
+                    if (commodity.getCommodityId().equals((checkOrderInfos.get(i)).getCommodityId())) {
+                        orderDetail.setCommodityNum(commodity.getCommodityNum());
+                        float mallSum = checkOrderInfos.get(i).getSkuPrice() * commodity.getCommodityNum() - commodity.getShipping();
+                        totalFee += mallSum;
+                        orderDetail.setTotalAmount(mallSum);
+                    }
                 }
+                orderDetails.add(orderDetail);
+                //以订单编号为id设置redis过期变量,用于定时取消订单,下面我们就不进行redis预减库存了,因为在支付前会进行数量减少
+                redisTemplate.opsForValue().set(Order_KEY_PREFIX + orderId + i, 1);
+                redisTemplate.expire(Order_KEY_PREFIX + orderId + i, 10, TimeUnit.MINUTES);
+                //将商品添加到hash表中进行商品数量预减，因为使用hash进行存储，可以进行自增自减，如果无法自增情况，我们需要通过redis事务或者通过redis变量做锁的情况进行处理
+                //redisTemplate.opsForHash().increment("preReduction", orderDetail.getCommodityId(), orderDetail.getCommodityNum());//商品出售数量
             }
-            if (!isAccess) {
-                return new RpsMsg().setStausCode(300).setMsg("无效支付方式");
-            }
-            //获取平台当前种类收款账户
-            List<PlantAccount> accounts = (List<PlantAccount>) restTemplate.exchange(PLANT_URL + "/plant/account/useable/1", HttpMethod.GET, httpEntity, RpsMsg.class).getBody().getData();
-            accounts = JSONObject.parseArray(JSON.toJSONString(accounts), PlantAccount.class);
-            if (accounts == null || accounts.size() == 0) {
-                return new RpsMsg().setStausCode(300).setMsg("平台暂时没有该类交易账户,请选择其它方式支付或者过段时间再下单");
-            }
-            //封装参数
-            List<SSMap> checkParam = new ArrayList<>();
-            List<Integer> commodityNums = new ArrayList<>();
-            for (OrderBeforeCommodity commodity : commodities) {
-                SSMap ssMap = new SSMap();
-                ssMap.setAttributeName(commodity.getCommodityId()).setAttributeValue(commodity.getSku().getSkuValue());
-                checkParam.add(ssMap);
-                commodityNums.add(commodity.getCommodityNum());
-            }
-            multiValueMap.add("commodities", JSON.toJSONString(checkParam));
-            multiValueMap.add("commodityNums", JSON.toJSONString(commodityNums));
-            httpEntity = new HttpEntity(multiValueMap, headers);
-            //获取商品规格信息
-            ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(SELLER_URL + "/sku/checkorder", HttpMethod.PUT, httpEntity, RpsMsg.class);
-            List<CheckOrderInfo> checkOrderInfos = JSONObject.parseArray(JSON.toJSONString(responseEntity.getBody().getData())).toJavaList(CheckOrderInfo.class);
-            if (checkOrderInfos.size() != commodities.size()) {
-                return new RpsMsg().setMsg("商品信息不存在");
-            }
-            //减少商品指定规格数量
-            responseEntity = restTemplate.exchange(SELLER_URL + "/sku/sub", HttpMethod.PUT, httpEntity, RpsMsg.class);
-            if (responseEntity.getStatusCode().is5xxServerError()) {
-                return new RpsMsg().setStausCode(300).setMsg("所选商品数量不足");
-            }
-            if (responseEntity.getBody().getStausCode() != 200) {
-                return responseEntity.getBody();
+            //生成订单
+            Order order = new Order().setOrderNumber(orderId).setConsumerPhone(comsumerPhone).setTotalAmount(totalFee);
+            //信息保存
+            if (saveOrderInfo(order, orderDetails)) {
+                //返回信息
+                return new RpsMsg().setStausCode(200).setData(new SSMap(orderId, order.getTotalAmount() + "")).setMsg("下单成功");
             } else {
-                float totalFee = 0;//所有商品总计费用
-                //生成订单细节
-                List<OrderDetail> orderDetails = new ArrayList<>();
-                for (int i = 0; i < checkOrderInfos.size(); i++) {
-                    OrderDetail orderDetail = new OrderDetail();
-                    orderDetail.setStoreId(checkOrderInfos.get(i).getStoreId()).setCommodityId(checkOrderInfos.get(i).getCommodityId())
-                            .setOrderNumber(orderId).setOdId(i).setAddressMsg(JSONObject.toJSONString(address))
-                            .setSkuValue(checkOrderInfos.get(i).getSkuValue()).setSkuMap(checkOrderInfos.get(i).getSkuMap());
-                    //调整数目计算每个商品小计
-                    for (OrderBeforeCommodity commodity : commodities) {
-                        if (commodity.getCommodityId().equals((checkOrderInfos.get(i)).getCommodityId())) {
-                            orderDetail.setCommodityNum(commodity.getCommodityNum());
-                            float mallSum = checkOrderInfos.get(i).getSkuPrice() * commodity.getCommodityNum() - commodity.getShipping();
-                            totalFee += mallSum;
-                            orderDetail.setTotalAmount(mallSum);
-                        }
-                    }
-                    orderDetails.add(orderDetail);
-                    //以订单编号为id设置redis过期变量,用于定时取消订单,下面我们就不进行redis预减库存了,因为在支付前会进行数量减少
-                    redisTemplate.opsForValue().set(orderId + i, 1);
-                    redisTemplate.expire(orderId + i, 10, TimeUnit.MINUTES);
-                    //将商品添加到hash表中进行商品数量预减，因为使用hash进行存储，可以进行自增自减，如果无法自增情况，我们需要通过redis事务或者通过redis变量做锁的情况进行处理
-                    //redisTemplate.opsForHash().increment("preReduction", orderDetail.getCommodityId(), orderDetail.getCommodityNum());//商品出售数量
-                }
-                //生成订单
-                Order order = new Order().setOrderNumber(orderId).setConsumerPhone(comsumerPhone).setTotalAmount(totalFee);
-                //信息保存
-                if (saveOrderInfo(order, orderDetails)) {
-                    //封装付款信息
-                    Object payData;
-                    if (payCate == 1) {
-                        AliAppPayParam aliAppPayParam = new AliAppPayParam();
-                        aliAppPayParam.setAttach(JSON.toJSONString(new SSMap(orderId, order.getTotalAmount() + "")))
-                                .setBody(JSON.toJSONString(new SSMap(orderId, order.getTotalAmount() + "")))
-                                .setMch_id(accounts.get(0).getAccountNo())
-                                .setNotify_url("http://localhost:8082/pay/callback/app")
-                                .setOut_trade_no(orderId)
-                                .setSign(accounts.get(0).getAccountKey())
-                                .setTotal_fee(order.getTotalAmount() + "");
-                        payData = getPayData(1, aliAppPayParam);
-                    } else {
-                        WechatAppPayParam wechatAppPayParam = new WechatAppPayParam();
-                        wechatAppPayParam.setApp_id(accounts.get(0).getAppId())
-                                .setBody(JSON.toJSONString(new SSMap(orderId, order.getTotalAmount() + "")))
-                                .setMch_id(accounts.get(0).getAccountNo())
-                                .setNotify_url("http://localhost:8082/pay/callback/app")
-                                .setOut_trade_no(orderId)
-                                .setSign(accounts.get(0).getAccountKey());
-                        payData = getPayData(2, wechatAppPayParam);
-                    }
-                    //返回信息
-                    return new RpsMsg().setStausCode(200).setData(new SSMap(orderId, order.getTotalAmount() + "")).setMsg("下单成功");
-                } else {
-                    //返回下单失败
-                    return new RpsMsg().setMsg("下单失败").setStausCode(200);
-                }
+                //返回下单失败
+                return new RpsMsg().setMsg("下单失败").setStausCode(200);
             }
         }
-    }
-
-    @Override
-    public RpsMsg orderPay(String orderNum, int odId) {
-        return null;
     }
 
     @Override
@@ -232,6 +191,81 @@ public class OrderServiceImp implements OrderService {
     @Override
     public RpsMsg getOrder(long phone, int state) {
         return new RpsMsg().setStausCode(200).setData(orderDetailMapper.selectOrderDetailByPhoneAndState(phone, state));
+    }
+
+    @Override
+    public RpsMsg modifyOrderDetailAddressByOrderNumberAndOdId(String orderNumber, int odId, String address, HttpServletRequest request) {
+        //先验证收货地址是否合法
+        String jwt = request.getHeader("jwt");
+        Long phone = (Long) request.getSession().getAttribute("phone");
+        Address consumerAddress = JSONObject.parseObject(address, Address.class);
+        headers.add("jwt", jwt);
+        MultiValueMap multiValueMap = new LinkedMultiValueMap();
+        HttpEntity httpEntity = new HttpEntity(multiValueMap, headers);
+        List<Address> checkAddresses = (List<Address>) restTemplate.exchange(CONSUMER_URL + "/consumer/info/addresses", HttpMethod.GET, httpEntity, RpsMsg.class).getBody().getData();
+        checkAddresses = JSONObject.parseArray(JSON.toJSONString(checkAddresses)).toJavaList(Address.class);
+        boolean isAccess = false;
+        for (int i = 0; i < checkAddresses.size(); i++) {
+            if (checkAddresses.get(i).getAddressId().equals(consumerAddress.getAddressId())) {
+                isAccess = true;
+                break;
+            }
+        }
+        if (!isAccess) {
+            //如果地址信息不存在
+            return new RpsMsg().setStausCode(300).setMsg("请选择已有地址信息");
+        }
+        //修改订单细节记录的地址
+        try {
+            if (orderDetailMapper.updateDetailAddress(address, phone, orderNumber, odId) == 1) {
+                return new RpsMsg().setStausCode(200).setMsg("收货地址修改成功");
+            } else {
+                return new RpsMsg().setStausCode(300).setMsg("修改失败，请稍后再试");
+            }
+        } catch (Exception e) {
+            return new RpsMsg().setStausCode(300).setMsg("修改失败，请稍后再试");
+        }
+    }
+
+    @Transactional(rollbackFor = IllegalArgumentException.class)
+    @Override
+    public RpsMsg chanelOrderDetail(HttpServletResponse response, String orderNumber, int odId, long phone, String jwt) {
+        //先删除指定订单细节记录
+        int rowNum = orderDetailMapper.updateDetailDeleteByIdAndPhone(orderNumber, odId, phone);
+        if (rowNum != 1) {
+            return new RpsMsg().setMsg("系统繁忙").setStausCode(300);
+        }
+        //如果修改成功,调用退款接口
+        headers.add("jwt", jwt);
+        MultiValueMap multiValueMap = new LinkedMultiValueMap();
+        multiValueMap.add("orderNumber", orderNumber);
+        multiValueMap.add("odId", odId);
+        HttpEntity entity = new HttpEntity(multiValueMap, headers);
+        ResponseEntity responseEntity = restTemplate.exchange(ORDER_URL + "/order/pay/detail/back", HttpMethod.POST, entity, RpsMsg.class);
+        //如果请求存在故障，抛出异常
+        if (!responseEntity.getStatusCode().is2xxSuccessful()) {
+            //先将取消订单失败信息反馈给用户
+            try {
+                response.getWriter().write(JSON.toJSONString(new RpsMsg().setStausCode(300).setMsg("系统繁忙,请稍后再试")));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //然后抛出异常，回滚修改
+            throw new IllegalArgumentException();
+        }
+        //如果服务响应，判断响应的状态
+        RpsMsg rpsMsg = (RpsMsg) responseEntity.getBody();
+        if (rpsMsg.getStausCode() != 200) {
+            try {
+                response.getWriter().write(JSON.toJSONString(new RpsMsg().setStausCode(300).setMsg("系统繁忙,请稍后再试")));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //然后抛出异常，回滚修改
+            throw new IllegalArgumentException();
+        } else {
+            return new RpsMsg().setStausCode(200).setMsg("取消订单成功,退款稍后到账");
+        }
     }
 
     @Transactional(rollbackFor = IllegalArgumentException.class)

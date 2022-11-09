@@ -3,8 +3,17 @@ package spiritray.order.schedule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import spiritray.common.pojo.DTO.RpsMsg;
+import spiritray.common.pojo.DTO.SSMap;
 import spiritray.order.mapper.OrderMapper;
 
 import java.util.Iterator;
@@ -33,7 +42,14 @@ public class OrderSchedule {
     private OrderMapper orderMapper;
 
     @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
     private RedisTemplate redisTemplate;
+
+    private final String ORDER_URL = "http://localhost:8082";
+
+    private final String BACK_URL = ORDER_URL + "/order/pay/detail/back";//退款回调地址
 
     //半个小时执行一次
     @Scheduled(fixedRate = 180000)
@@ -53,7 +69,18 @@ public class OrderSchedule {
     /*退款失败任务重新执行*/
     @Scheduled(cron = "0 0 19 ? * *")
     private void execBackFail() {
-
+        Iterator iterator = backFail.iterator();
+        while (iterator.hasNext()) {
+            SSMap ssMap = (SSMap) iterator.next();
+            MultiValueMap multiValueMap = new LinkedMultiValueMap();
+            multiValueMap.add("orderNumber", ssMap.getAttributeName());
+            multiValueMap.add("odId", ssMap.getAttributeValue());
+            HttpEntity entity = new HttpEntity(multiValueMap, new HttpHeaders());
+            ResponseEntity responseEntity = restTemplate.exchange(BACK_URL, HttpMethod.POST, entity, RpsMsg.class);
+            if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                backFail.remove(ssMap);
+            }
+        }
     }
 
     //每天4点执行无订单细节订单清除:秒 分 时 日 月 年

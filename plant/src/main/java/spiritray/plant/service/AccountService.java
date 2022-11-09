@@ -15,5 +15,8 @@ public interface AccountService {
     public RpsMsg queryAccountCategory();
 
     /*查询指定种类账户,type:0表示全部，1表示不能使用，2表示能够使用的*/
-    public RpsMsg queryAccountByCate(int cate,int type);
+    public RpsMsg queryAccountByCate(int cate, int type);
+
+    /*查询指定种类账户的可用首条数据*/
+    public RpsMsg queryAccountUsableFirstByCate(int cate);
 }

@@ -41,10 +41,16 @@ public class CommodityController {
     private CommodityMapper commodityMapper;
 
     /*批量查询商品的名称*/
-    @PutMapping("/commoidtyName")
+    @PutMapping("/commodityName")
     public RpsMsg getCommodityNameMul(String ids) {
         List<String> commodityIds = JSON.parseArray(ids).toJavaList(String.class);
-        return new RpsMsg().setData(commodityMapper.selectCommodityName(commodityIds));
+        return new RpsMsg().setStausCode(200).setData(commodityMapper.selectCommodityName(commodityIds));
+    }
+
+    /*查询指定商品id的商品信息*/
+    @GetMapping("/order/{commodityId}")
+    public RpsMsg getCommodityById(@PathVariable String commodityId) {
+        return new RpsMsg().setStausCode(200).setData(commodityMapper.selectCommodityById(commodityId));
     }
 
     /*发布商品信息*/

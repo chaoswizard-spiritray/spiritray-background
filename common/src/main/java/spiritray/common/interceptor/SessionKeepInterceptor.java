@@ -1,6 +1,5 @@
 package spiritray.common.interceptor;
 
-import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.auth0.jwt.JWT;
 import org.springframework.web.servlet.HandlerInterceptor;

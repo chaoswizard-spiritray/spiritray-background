@@ -191,15 +191,22 @@
             commodity
     </select>
 
-    <select id="selectCommodityName" resultType="java.lang.String">
-        SELECT commodity_name
+    <select id="selectCommodityName" resultType="spiritray.common.pojo.DTO.SSMap">
+        SELECT commodity_id AS attributeName,commodity_name AS attributeValue
         FROM
         commodity
         WHERE
-        (
-        <foreach collection="ids" separator="," item="id">
-            id
+        commodity_id IN
+        <foreach collection="ids" open="(" separator="," close=")" item="id">
+            #{id}
         </foreach>
-        )
+    </select>
+
+    <select id="selectCommodityById" resultType="spiritray.common.pojo.PO.Commodity">
+        SELECT *
+        FROM
+            commodity
+        WHERE
+            commodity_id = #{commodityId}
     </select>
 </mapper>

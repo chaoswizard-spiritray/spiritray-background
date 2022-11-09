@@ -21,10 +21,9 @@ import java.sql.Timestamp;
 @Accessors(chain = true)
 public class Cpi {
     private String cpiId;
-    private String yungouNo;
     private String payNo;
     private int accaId;
     private String plantAccount;
-    private String payMoney;
+    private float payMoney;
     private Timestamp payDate;
 }

@@ -17,6 +17,12 @@ import spiritray.common.pojo.PO.Cpi;
 @Repository
 public interface CpiMapper {
 
-    /*插入支付记录*/
+    /*插入单条支付记录*/
     public int insertCpi(@Param("cpi") Cpi cpi);
+
+    /*插入指定主订单号下所有的订单细节支付信息*/
+    public int insertCpis(@Param("cpi") Cpi cpi);
+
+    /*查询指定订单细节的支付信息*/
+    public Cpi selectCpiByCpiId(@Param("cpiId") String cpiId);
 }

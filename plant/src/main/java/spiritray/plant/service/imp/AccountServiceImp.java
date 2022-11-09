@@ -28,4 +28,11 @@ public class AccountServiceImp implements AccountService {
     public RpsMsg queryAccountByCate(int cate, int type) {
         return new RpsMsg().setData(accountMapper.selectAccount(cate, type)).setStausCode(200);
     }
+
+    @Override
+    public RpsMsg queryAccountUsableFirstByCate(int cate) {
+        return new RpsMsg().setData(accountMapper.selectAccountUsableFirstByCate(cate)).setStausCode(200);
+    }
+
+
 }

@@ -33,4 +33,12 @@
                     od.num = 0
             )
     </update>
+
+    <select id="selectOrderAllAmount" resultType="java.lang.Float">
+        SELECT `order`.total_amount
+        FROM
+            `order`
+        WHERE
+            order_number = #{orderId}
+    </select>
 </mapper>

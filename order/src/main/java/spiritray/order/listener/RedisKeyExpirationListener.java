@@ -35,6 +35,8 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
     @Autowired
     private HttpHeaders httpHeaders;
 
+    private final String Order_KEY_PREFIX = "order";//redis订单细节编号为key的前缀
+
     public RedisKeyExpirationListener(RedisMessageListenerContainer listenerContainer) {
         super(listenerContainer);
     }
@@ -43,8 +45,14 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String key = message.toString();
-        String orderNo = key.substring(0, 36);
-        int odId = Integer.parseInt(key.substring(36, key.length()));
+        //先过滤一下key
+        if (key.length() < 37 || key.indexOf(Order_KEY_PREFIX) != 0) {
+            return;
+        }
+        //提取订单编号
+        int len = Order_KEY_PREFIX.length();
+        String orderNo = key.substring(len, len + 36);
+        int odId = Integer.parseInt(key.substring(len + 36, key.length()));
         //先判断订单状态
         int state = orderDetailMapper.selectDetailStateById(orderNo, odId);
         if (state == 0) {
@@ -58,6 +66,7 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
             restTemplate.exchange("http://localhost:8081/sku/add", HttpMethod.PUT, httpEntity, RpsMsg.class);
             //删除订单细节记录
             orderDetailMapper.updateDetailDeleteById(orderNo, odId);
+            System.out.println("订单超时自动取消");
         }
     }
 }

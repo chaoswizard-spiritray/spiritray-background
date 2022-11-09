@@ -19,6 +19,9 @@ public interface OrderMapper {
     /*插入订单信息*/
     public int insertOrder(@Param("order") Order order);
 
+    /*查询订单总金额*/
+    public float selectOrderAllAmount(@Param("orderId") String orderId);
+
     /*清除无订单细节的订单*/
     public int updateOrderNoDetail();
 }

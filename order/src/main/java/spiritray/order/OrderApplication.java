@@ -7,10 +7,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import spiritray.common.config.InterceptorConfig;
 import spiritray.common.config.RedisConfig;
-import spiritray.common.config.RedisListenerConfig;
+import spiritray.order.config.RedisListenerConfig;
 import spiritray.common.config.ZoneCorsConfig;
-
-import java.util.UUID;
 
 @SpringBootApplication
 @Import({ZoneCorsConfig.class, InterceptorConfig.class, RedisConfig.class, RedisListenerConfig.class})

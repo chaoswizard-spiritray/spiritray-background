@@ -1,9 +1,11 @@
-package spiritray.common.config;
+package spiritray.order.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import spiritray.order.listener.RedisKeyExpirationListener;
 
 /**
  * ClassName:RedisListenerConfig
@@ -20,6 +22,7 @@ public class RedisListenerConfig {
     RedisMessageListenerContainer container(RedisConnectionFactory factory) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
+        container.addMessageListener(new RedisKeyExpirationListener(container), new PatternTopic("_keyevent@0_:expired"));
         return container;
     }
 }

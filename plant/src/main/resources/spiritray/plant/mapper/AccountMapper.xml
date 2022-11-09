@@ -69,4 +69,33 @@
             </if>
         </where>
     </select>
+
+    <select id="selectAccountCategoryIsCanUse" resultType="java.lang.Integer">
+        SELECT ac.acca_id
+        FROM
+            account_category AS ac
+        WHERE ac.acca_id = #{cate}
+              AND ac.is_open = 1
+    </select>
+
+    <select id="selectAccountUsableFirstByCate" resultType="spiritray.common.pojo.PO.PlantAccount">
+        SELECT *
+        FROM
+            plant_account
+        WHERE
+            acca_id = 1
+            AND
+            is_useable = 1
+        LIMIT 0, 1
+    </select>
+
+    <select id="selectAccountByCateAndAccount" resultType="spiritray.common.pojo.PO.PlantAccount">
+        SELECT *
+        FROM
+            plant_account
+        WHERE
+            plant_account.acca_id = #{cate}
+            AND
+            plant_account.account_no = #{account}
+    </select>
 </mapper>

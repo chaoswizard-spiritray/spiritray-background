@@ -3,24 +3,30 @@
 <mapper namespace="spiritray.order.mapper.PbiMapper">
 
     <insert id="insertPbi">
-        INSERT INTO pbi (
-            pbi.pbi_id,
-            pbi.yungou_no,
-            pbi.pay_no,
-            pbi.acca_id,
-            pbi.plant_account,
-            pbi.back_money,
-            pbi.back_date
-        )
+        INSERT INTO
+            pbi
+            (
+                pbi.acca_id,
+                pbi.back_date,
+                pbi.back_money,
+                pbi.back_status,
+                pbi.pay_no,
+                pbi.pbi_id,
+                pbi.plant_account,
+                pbi.return_no,
+                pbi.start_date
+            )
         VALUES
             (
-                #{pbi.pbiId},
-                #{pbi.yungouNo},
-                #{pbi.payNo},
                 #{pbi.accaId},
-                #{pbi.plantAccount},
+                #{pbi.backDate},
                 #{pbi.backMoney},
-                NOW()
+                #{pbi.backStatus},
+                #{pbi.payNo},
+                #{pbi.pbiId},
+                #{pbi.plantAccount},
+                #{pbi.returnNo},
+                #{pbi.startDate}
             )
     </insert>
 </mapper>

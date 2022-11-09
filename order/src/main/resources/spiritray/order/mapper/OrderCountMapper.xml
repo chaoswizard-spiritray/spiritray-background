@@ -15,4 +15,21 @@
             DATE_FORMAT(`order`.order_date, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
         ORDER BY commodity_id;
     </select>
+
+    <select id="selectConsumerOrderNum" resultType="spiritray.common.pojo.DTO.NNMap">
+        SELECT
+            order_detail.state AS `key`,
+            COUNT(state)       AS `value`
+        FROM
+            `order`
+            JOIN order_detail
+                ON
+                    `order`.order_number = order_detail.order_number
+        WHERE
+            `order`.consumer_phone = #{phone}
+            AND
+            order_detail.is_delete = 0
+        GROUP BY order_detail.state
+        ORDER BY order_detail.state
+    </select>
 </mapper>

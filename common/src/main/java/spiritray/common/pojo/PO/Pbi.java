@@ -21,10 +21,12 @@ import java.sql.Timestamp;
 @Accessors(chain = true)
 public class Pbi {
     private String pbiId;
-    private String yungouNo;
     private String payNo;
+    private String returnNo;
     private int accaId;
     private String plantAccount;
-    private String backMoney;
+    private float backMoney;
+    private Timestamp startDate;
     private Timestamp backDate;
+    private int backStatus;
 }

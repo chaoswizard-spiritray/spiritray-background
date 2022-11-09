@@ -20,8 +20,11 @@ public interface CommodityMapper {
     /*查询所有商品id*/
     public List<String> selectAllCommodityId();
 
+    /*查询指定商品id的商品信息*/
+    public Commodity selectCommodityById(@Param("commodityId") String commodityId);
+
     /*查询批量商品的名字*/
-    public List<String> selectCommodityName(@Param("ids") List list);
+    public List<SSMap> selectCommodityName(@Param("ids") List ids);
 
     /*插入商品基本信息*/
     public int insertCommodity(@Param("commodity") Commodity commodity);

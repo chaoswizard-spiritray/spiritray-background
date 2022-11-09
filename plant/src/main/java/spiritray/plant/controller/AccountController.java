@@ -38,6 +38,30 @@ public class AccountController {
         return accountService.queryAccountByCate(cate, 2);
     }
 
+    /*获取指定类型的可用账户的首条账户数据*/
+    @GetMapping("/account/useable/{cate}/first")
+    public RpsMsg getAccountUseableFirstByCate(@PathVariable int cate) {
+        return accountService.queryAccountUsableFirstByCate(cate);
+    }
+
+    /*获取账户类型的指定商户号的可用的退款账户*/
+    @GetMapping("/account/{cate}/{account}")
+    public RpsMsg getAccountByCataAndAccount(@PathVariable int cate, @PathVariable String account) {
+        PlantAccount plantAccount = accountMapper.selectAccountByCateAndAccount(cate, account);
+        //如果账户不存在，或者对象不可使用
+        if (plantAccount == null || plantAccount.getIsUseable() == 0) {
+            //接着获取指定类型首条能够使用商户
+            PlantAccount tempAccount = (PlantAccount) getAccountUseableFirstByCate(cate).getData();
+            if (tempAccount == null || tempAccount.getIsUseable() == 0) {
+                return new RpsMsg().setStausCode(200).setMsg("查询成功").setData(null);
+            } else {
+                return new RpsMsg().setStausCode(200).setMsg("查询成功").setData(tempAccount);
+            }
+        } else {
+            return new RpsMsg().setStausCode(200).setMsg("查询成功").setData(plantAccount);
+        }
+    }
+
     /*获取平台所有可用账户*/
     @GetMapping("/account/all/{cate}")
     public RpsMsg getPlantAccountAll(@PathVariable int cate) {
@@ -87,4 +111,16 @@ public class AccountController {
         }
     }
 
+    /*获取指定账户*/
+
+    /*检测指定支付类型是否是平台提供的支付方式*/
+    @GetMapping("/account/cate/verify/{cate}")
+    public RpsMsg verifyAccountCate(@PathVariable int cate) {
+        try {
+            int result = accountMapper.selectAccountCategoryIsCanUse(cate);
+            return new RpsMsg().setData(true).setStausCode(200);
+        } catch (Exception e) {
+            return new RpsMsg().setStausCode(200).setData(false);
+        }
+    }
 }

@@ -5,8 +5,30 @@
     <insert id="insertCpi">
         INSERT INTO
             cpi
-            (cpi.cpi_id, cpi.yungou_no, cpi.pay_no, cpi.acca_id, cpi.plant_account, cpi.pay_money, cpi.pay_date)
+            (cpi.cpi_id, cpi.pay_no, cpi.plant_account, cpi.acca_id, cpi.pay_money, cpi.pay_date)
         VALUES
-            (#{cpi.cpiId}, #{cpi.yungouNo}, #{cpi.payNo}, #{cpi.accaId}, #{cpi.plantAccount}, #{cpi.payMoney}, NOW())
+            (#{cpi.cpiId}, #{cpi.payNo}, #{cpi.plantAccount}, #{cpi.accaId}, #{cpi.payMoney}, #{cpi.payDate})
     </insert>
+
+    <insert id="insertCpis">
+        INSERT INTO
+            cpi
+            (cpi.cpi_id, cpi.pay_no, cpi.plant_account, cpi.acca_id, cpi.pay_money, cpi.pay_date)
+            SELECT
+                CONCAT(order_number, od_id) AS cpi_id,
+                #{cpi.payNo},
+                #{cpi.plantAccount},
+                #{cpi.accaId},
+                order_detail.total_amount   AS pay_money,
+                #{cpi.payDate}
+            FROM order_detail
+    </insert>
+
+    <select id="selectCpiByCpiId" resultType="spiritray.common.pojo.PO.Cpi">
+        SELECT *
+        FROM
+            cpi
+        WHERE
+            cpi.cpi_id = #{cpiId}
+    </select>
 </mapper>

@@ -13,6 +13,7 @@ import spiritray.common.pojo.PO.Address;
 import spiritray.order.service.OrderService;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,13 +36,15 @@ public class OrderController {
     @Autowired
     private RedisTemplate redisTemplate;
 
+    private final String Order_KEY_PREFIX = "order";//redis订单细节编号为key的前缀
+
     /*查询指定商品数组的过期时间*/
     @GetMapping("/overtime")
     public RpsMsg getOverTime(String orderDetailIds) {
         List<String> ids = JSON.parseArray(orderDetailIds).toJavaList(String.class);
         List<SNMap> data = new ArrayList<>();
         for (String id : ids) {
-            SNMap snMap = new SNMap(id, redisTemplate.getExpire(id));
+            SNMap snMap = new SNMap(id, redisTemplate.getExpire(Order_KEY_PREFIX + id));
             data.add(snMap);
         }
         return new RpsMsg().setData(data);
@@ -91,6 +94,19 @@ public class OrderController {
     @GetMapping("/over")
     public RpsMsg getOver(HttpSession session) {
         return orderService.getOrder((Long) session.getAttribute("phone"), 3);
+    }
+
+    //修改当前用户未发货订单的收货地址
+    @PutMapping("/notrans/address")
+    public RpsMsg putOrderAddress(HttpServletRequest request, String address, String orderNumber, int odId) {
+        //调用的修改订单服务
+        return orderService.modifyOrderDetailAddressByOrderNumberAndOdId(orderNumber, odId, address, request);
+    }
+
+    /*取消未发货的订单*/
+    @PutMapping("/notrans/chanel")
+    public RpsMsg chanelOrderDetail(String orderNumber, int odId, HttpSession session, HttpServletRequest request, HttpServletResponse response) {
+        return orderService.chanelOrderDetail(response, orderNumber, odId, (Long) session.getAttribute("phone"), request.getHeader("jwt"));
     }
 
 

@@ -48,7 +48,6 @@ public class SkuController {
         try {
             rpsMsg = skuService.updateSkuNum(checkParams, nums);
         } catch (IllegalArgumentException e) {
-            System.out.println(e.getCause());
             return rpsMsg.setMsg("商品数量不足").setStausCode(300);
         }
         return rpsMsg;
