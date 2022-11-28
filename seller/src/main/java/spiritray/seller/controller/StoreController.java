@@ -6,15 +6,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import spiritray.common.pojo.BO.FileUploadInterface;
+import spiritray.common.pojo.DTO.LSS;
 import spiritray.common.pojo.DTO.RpsMsg;
+import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.DTO.StoreLicenseSimple;
 import spiritray.common.pojo.PO.Seller;
 import spiritray.common.pojo.PO.SellerAccount;
 import spiritray.common.pojo.PO.Store;
+import spiritray.seller.mapper.StoreMapper;
 import spiritray.seller.service.StoreService;
 
 import javax.servlet.http.HttpSession;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ClassName:StoreController
@@ -30,10 +36,31 @@ public class StoreController {
     @Autowired
     private StoreService storeService;
 
+    @Autowired
+    private StoreMapper storeMapper;
+
+    /*通过电话批量查询店铺的名称和头像*/
+    @GetMapping("/headAndName/many")
+    public RpsMsg getStoreHeadAndName(@RequestParam String phones) {
+        List<Long> storePhones = JSON.parseArray(phones, Long.class);
+        List<LSS> result = new ArrayList<>();
+        for (Long storePhone : storePhones) {
+            Store store = storeMapper.selectStoreByPhone(storePhone);
+            result.add(new LSS(storePhone, store.getStoreName(), store.getStoreHead()));
+        }
+        return new RpsMsg().setMsg("查询成功").setStausCode(200).setData(result);
+    }
+
     /*通过电话查询当前登录者的店铺信息*/
     @GetMapping("/storeInf/phone")
     public RpsMsg getStoreInfByPhone(HttpSession session) {
         return storeService.findStoreByPhone((Long) session.getAttribute("phone"), session);
+    }
+
+    /*通过店铺编号查询店铺电话*/
+    @GetMapping("/storeInf/phone/{storeId}")
+    public RpsMsg getStorePhoneByStoreId(@PathVariable String storeId) {
+        return new RpsMsg().setStausCode(200).setData(storeMapper.selectStorePhoneByStoreId(storeId));
     }
 
     /*通过店铺编号查询店铺信息*/

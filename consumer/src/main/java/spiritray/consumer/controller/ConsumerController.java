@@ -4,8 +4,10 @@ import cn.hutool.captcha.CaptchaUtil;
 import cn.hutool.captcha.LineCaptcha;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.digest.MD5;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import lombok.SneakyThrows;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -22,21 +24,22 @@ import org.springframework.web.multipart.MultipartFile;
 import spiritray.common.pojo.BO.CommonInputStreamResource;
 import spiritray.common.pojo.BO.FileUploadInterface;
 import spiritray.common.pojo.BO.MsgCode;
+import spiritray.common.pojo.DTO.LSS;
 import spiritray.common.pojo.DTO.RegisterDTO;
 import spiritray.common.pojo.DTO.RpsMsg;
+import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.Address;
 import spiritray.common.pojo.PO.Consumer;
 import spiritray.common.tool.CodeTool;
 import spiritray.common.tool.EmailSendTool;
+import spiritray.consumer.mapper.ConsumerMapper;
 import spiritray.consumer.service.ConsumerService;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * ClassName:ConsumerController
@@ -52,6 +55,9 @@ import java.util.UUID;
 public class ConsumerController {
     @Autowired
     private ConsumerService consumerService;
+
+    @Autowired
+    private ConsumerMapper consumerMapper;
 
     @Autowired
     private JavaMailSender javaMailSender;
@@ -217,5 +223,33 @@ public class ConsumerController {
         redisTemplate.opsForHash().put("emailCodes", sendTo, msgCode);
         javaMailSender.send(EmailSendTool.getSimpleMailMessage(sendFrom, sendTo, "spiritray密码重置", "本次验证码为" + msgCode.getCode() + "有效时间为60秒"));
         return new RpsMsg().setMsg("邮件发送成功，注意查收").setStausCode(200);
+    }
+
+    /*批量获取买家昵称和头像*/
+    @GetMapping("/headAndName/many")
+    public RpsMsg getHeadAndNameMany(@RequestParam("consumerPhones") String consumerPhones) {
+        List<Long> phones = JSON.parseArray(consumerPhones, Long.class);
+        if (phones == null || phones.size() == 0) {
+            return new RpsMsg().setStausCode(200).setMsg("查询成功");
+        }
+        List<Consumer> consumers = consumerMapper.selectNameAndHeadByPhone(phones);
+        List<LSS> result = new ArrayList<>();
+        for (Long phone : phones) {
+            for (Consumer consumer : consumers) {
+                if (phone.longValue() == consumer.getConsumerPhone()) {
+                    result.add(new LSS(phone, consumer.getConsumerHead(), consumer.getConsumerNickname()));
+                }
+            }
+        }
+        return new RpsMsg().setData(result).setStausCode(200).setMsg("查询成功");
+    }
+
+    /*获取指定买家头像与昵称*/
+    @GetMapping("/headAndName/simple/{phone}")
+    public RpsMsg getHeadAndNickNameByPhone(@PathVariable long phone) {
+        if (phone <= 0) {
+            return new RpsMsg().setStausCode(200).setMsg("查询成功");
+        }
+        return new RpsMsg().setStausCode(200).setMsg("查询成功").setData(consumerMapper.selectConsumerByConsumer(new Consumer().setConsumerPhone(phone)));
     }
 }

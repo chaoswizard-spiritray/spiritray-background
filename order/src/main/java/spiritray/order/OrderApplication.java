@@ -7,11 +7,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import spiritray.common.config.InterceptorConfig;
 import spiritray.common.config.RedisConfig;
-import spiritray.order.config.RedisListenerConfig;
+import spiritray.common.config.ThreadPoolConfig;
 import spiritray.common.config.ZoneCorsConfig;
+import spiritray.order.config.RedisListenerConfig;
 
 @SpringBootApplication
-@Import({ZoneCorsConfig.class, InterceptorConfig.class, RedisConfig.class, RedisListenerConfig.class})
+@Import({ZoneCorsConfig.class, InterceptorConfig.class, RedisConfig.class, RedisListenerConfig.class, ThreadPoolConfig.class})
 @MapperScan(basePackages = "spiritray.order.mapper")
 @EnableScheduling
 public class OrderApplication {

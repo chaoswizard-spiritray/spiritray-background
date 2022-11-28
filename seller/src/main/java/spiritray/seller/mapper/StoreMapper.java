@@ -22,6 +22,9 @@ public interface StoreMapper {
     /*通过电话查询店铺信息*/
     public Store selectStoreByPhone(@Param("phone") long phone);
 
+    /*查询直指定店铺的电话*/
+    public Long selectStorePhoneByStoreId(@Param("storeId") String storeId);
+
     /*通过店铺编号查询店铺信息*/
     public Store selectStoreByStoreId(@Param("storeId") String storeId);
 

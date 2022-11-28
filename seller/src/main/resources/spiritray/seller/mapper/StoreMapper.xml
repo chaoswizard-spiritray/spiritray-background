@@ -203,4 +203,15 @@
         WHERE
             store_id = #{storeId}
     </select>
+
+    <select id="selectStorePhoneByStoreId" resultType="java.lang.Long">
+        SELECT seller.seller_phone
+        FROM
+            seller
+            JOIN store
+                ON
+                    seller.seller_id = store.seller_id
+        WHERE
+            store.store_id = #{storeId}
+    </select>
 </mapper>

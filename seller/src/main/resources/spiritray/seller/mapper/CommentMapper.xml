@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.CommentMapper">
+    <sql id="typeCondition">
+        -- 最近七天的评论
+        <if test="type==1">
+            AND
+            TIMESTAMPADD(DAY,start_date,NOW())>=7
+        </if>
+        -- 星级大于等于3为好评
+        <if test="type==2">
+            AND
+            star_level>=3
+        </if>
+        -- 星级小于3为差评
+        <if test="type==3">
+            AND
+            star_level &lt; 3
+        </if>
+        -- 附图不为空
+        <if test="type==4">
+            AND
+            attched_map IS NOT NULL
+        </if>
+        -- 按买家电话分组，并且评论数目大于1的说明多次购买
+        <if test="type==5">
+            GROUP BY `comment`.consumer_phone
+            HAVING COUNT(*)>1
+        </if>
+    </sql>
+
+    <insert id="insertComment">
+        INSERT INTO
+            `comment`
+        VALUES
+            (
+                #{comment.commentNo},
+                #{comment.orderNumber},
+                #{comment.odId},
+                #{comment.commodityId},
+                #{comment.consumerPhone},
+                #{comment.commentContent},
+                #{comment.attchedMap},
+                #{comment.starLevel},
+                #{comment.isAnonymous},
+                #{comment.startDate}
+            )
+    </insert>
+
+    <select id="selectCommentCountsByCommodityIdAndType" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM `comment`
+        WHERE
+        commodity_id = #{commodityId}
+        <include refid="typeCondition"></include>
+    </select>
+
+    <select id="selectCommentByCommodityIdAndTypeAndPageSeaparate"
+            resultType="spiritray.common.pojo.PO.Comment">
+        SELECT
+        comment_no,
+        comment_content,
+        attched_map,
+        star_level,
+        start_date,
+        order_number,
+        od_id,
+        consumer_phone
+        FROM
+        `comment`
+        <include refid="typeCondition"></include>
+        LIMIT #{pageNo},#{pageNum}
+    </select>
+</mapper>

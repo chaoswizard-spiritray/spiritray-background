@@ -136,4 +136,21 @@
         ORDER BY is_default DESC;
     </select>
 
+    <select id="selectNameAndHeadByPhone" resultType="spiritray.common.pojo.PO.Consumer">
+        SELECT
+        consumer_phone,
+        consumer.consumer_head ,
+        consumer.consumer_nickname
+        FROM consumer
+        <if test="phones!=null">
+            <where>
+                consumer_phone IN
+                <foreach collection="phones" open="(" separator="," close=")" item="phone">
+                    #{phone}
+                </foreach>
+            </where>
+        </if>
+    </select>
+
+
 </mapper>

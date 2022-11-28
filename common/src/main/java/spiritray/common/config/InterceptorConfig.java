@@ -40,18 +40,6 @@ public class InterceptorConfig implements WebMvcConfigurer {
         return headers;
     }
 
-    //订单令牌失效集合
-    @Bean("orderTokens")
-    public Map<String, Long> getOrderTokenMap() {
-        return new HashMap<>();
-    }
-
-    //退款失败任务集合https://segmentfault.com/a/1190000041364081,注意这个需要保证线程安全，因为读写共享,我们使用Java自提供的线程安全的数组
-    @Bean("backFail")
-    public List<SSMap> getBackTask() {
-        return Collections.synchronizedList(new ArrayList<>());
-    }
-
     @Bean
     public RestTemplate getRestTemplate() {
         return new RestTemplate();
@@ -114,6 +102,7 @@ public class InterceptorConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/consumer/code")
                 .excludePathPatterns("/consumer/login/**")
                 .excludePathPatterns("/consumer/emailCode/**")
+                .excludePathPatterns("/consumer/headAndName/**")
                 .addPathPatterns("/seller/enter")
                 .addPathPatterns("/store/**")
                 //.addPathPatterns("/commodity/**")
@@ -121,16 +110,19 @@ public class InterceptorConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/store/storeInf/status/**")
                 .excludePathPatterns("/store/storeInf/license/**")
                 .excludePathPatterns("/store/storeLicenseSimple/**")
+                .excludePathPatterns("/store/headAndName/**")
                 .excludePathPatterns("/commodity/plat/check/**")
                 .excludePathPatterns("/consumer/cart/**");
 
         //添加store拦截器
         registry.addInterceptor(getStoreInterceptor())
                 .addPathPatterns("/store/**")
+                .addPathPatterns("/order/store")
                 .excludePathPatterns("/store/storeInf/status/**")
                 .excludePathPatterns("/store/storeInf/license/**")
-                .excludePathPatterns("/store/storeInf/phone")
+                .excludePathPatterns("/store/storeInf/**")
                 .excludePathPatterns("/store/storeLicenseSimple/**")
+                .excludePathPatterns("/store/headAndName/**")
                 .addPathPatterns("/commodity/**")
                 .excludePathPatterns("/commodity/commodityName/**")
                 .excludePathPatterns("/commodity/order/**")

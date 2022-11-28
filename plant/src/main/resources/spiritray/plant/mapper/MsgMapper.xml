@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.plant.mapper.MsgMapper">
+    <insert id="insertMsgSimple">
+        INSERT INTO
+            msg
+        VALUES (#{msg.msgId}, #{msg.sender}, #{msg.receiver}, #{msg.senderRole}, #{msg.receiverRole}, #{msg.msg},
+                #{msg.msgType}, 0,
+                #{msg.sendDate}, 0)
+    </insert>
+
+    <update id="updateMsgIsDelete">
+        UPDATE msg
+        SET
+            is_delete = 1
+        WHERE
+            msg_id = #{msgId}
+            AND
+            receiver = #{receiver}
+    </update>
+
+    <update id="updateAllDeleteBySenderIdAndReceiver">
+        UPDATE msg
+        SET is_delete = 1
+        WHERE
+            msg.sender = #{sender}
+            AND
+            msg.receiver = #{receiver}
+    </update>
+
+    <update id="updateMsgReaded">
+        UPDATE msg
+        SET
+            is_read = 1
+        WHERE
+            msg_id = #{msgId}
+            AND
+            receiver = #{receiver}
+    </update>
+
+    <select id="selectMsgHomeInfoByReceiver" resultType="spiritray.common.pojo.DTO.MsgHomeInfo">
+        SELECT
+            msg.receiver      AS sender,
+            msg.receiver_role AS sender_role,
+            msg.msg           AS lastest_msg,
+            msg.msg_type      AS lastest_msg_type,
+            msg.is_read       AS lastest_msg_is_read,
+            msg.send_date     AS lastest_msg_date
+        FROM
+            (
+                SELECT *
+                FROM msg
+                WHERE msg.is_delete = 0
+                      AND
+                      msg.sender = #{receiver}
+                      AND
+                      sender_role = #{senderRole}
+                ORDER BY receiver, send_date DESC
+            ) msg
+        GROUP BY msg.receiver
+        UNION
+
+        SELECT
+            msg.sender,
+            msg.sender_role,
+            msg.msg       AS lastest_msg,
+            msg.msg_type  AS lastest_msg_type,
+            msg.is_read   AS lastest_msg_is_read,
+            msg.send_date AS lastest_msg_date
+        FROM
+            (
+                SELECT *
+                FROM msg
+                WHERE msg.is_delete = 0
+                      AND
+                      msg.receiver = #{receiver}
+                      AND
+                      sender_role = #{recevicerRole}
+                ORDER BY sender, send_date DESC
+            ) msg
+        GROUP BY msg.sender
+    </select>
+
+    <select id="selectMsgBySenderAndPage" resultType="spiritray.common.pojo.PO.Msg">
+        SELECT *
+        FROM
+            msg
+        WHERE
+            (receiver = #{receiver}
+             AND
+             sender = #{sender})
+            OR
+            (receiver = #{sender}
+             AND
+             sender = #{receiver})
+            AND
+            is_delete = 0
+        ORDER BY send_date DESC
+        LIMIT #{pageNo}, #{pageNum}
+    </select>
+</mapper>

@@ -8,11 +8,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Component;
 import spiritray.common.config.InterceptorConfig;
 import spiritray.common.config.RedisConfig;
+import spiritray.common.config.ThreadPoolConfig;
 import spiritray.common.config.ZoneCorsConfig;
 
 
 @SpringBootApplication
-@Import({ZoneCorsConfig.class, RedisConfig.class, InterceptorConfig.class})
+@Import({ZoneCorsConfig.class, RedisConfig.class, InterceptorConfig.class, ThreadPoolConfig.class})
 @MapperScan(basePackages = "spiritray.consumer.mapper")
 public class ConsumerApplication {
 

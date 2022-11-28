@@ -24,7 +24,7 @@ spring:
   mail:
     host: smtp.qq.com #smtp服务器域名
     username: 1790926041@qq.com #发送方邮箱号
-    password: lvbmxtgnkvdnbdbj #发送方授权码
+    password: dhfvakrnxfprbedg #发送方授权码
     properties:
       mail:
         smtp:
@@ -35,6 +35,8 @@ spring:
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+  level:
+    spiritray.plant.mapper: debug
 server:
   port: 8083
   address: 0.0.0.0

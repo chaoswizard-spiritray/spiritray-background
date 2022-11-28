@@ -33,6 +33,8 @@ spring:
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+  level:
+    spiritray.consumer.mapper: debug
 server:
   port: 8080
   address: 0.0.0.0

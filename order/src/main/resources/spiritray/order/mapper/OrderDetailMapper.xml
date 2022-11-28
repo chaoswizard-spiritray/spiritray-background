@@ -50,6 +50,8 @@
             order_detail.order_number = #{orderNumber}
             AND
             order_detail.od_id = #{odId}
+            AND
+            is_delete=0
     </update>
 
     <update id="updateDetailDeleteById">
@@ -101,6 +103,22 @@
                       AND `order`.is_delete = 0
                       AND `order`.order_number = #{orderNumber}
             )
+    </update>
+
+    <update id="updateOrderDetailLogisticsNo">
+        UPDATE order_detail
+        SET logistics_no = #{logisticsNo},
+            state        = 2
+        WHERE
+            order_number = #{orderNumber}
+            AND
+            od_id = #{odId}
+            AND
+            is_delete = 0
+            AND
+            store_id = #{storeId}
+            AND
+            state = 1
     </update>
 
     <select id="selectDetailStateById" resultType="java.lang.Integer">
@@ -170,4 +188,128 @@
             AND
             order_detail.state = 0;
     </select>
+
+    <select id="selectOrderDetailStateByPhoneAndOrderNumber" resultType="java.lang.Integer">
+        SELECT order_detail.state
+        FROM
+            `order`
+            JOIN order_detail
+                ON
+                    `order`.order_number = order_detail.order_number
+        WHERE
+            `order`.consumer_phone = #{phone}
+            AND
+            order_detail.order_number = #{orderNumber}
+            AND
+            order_detail.od_id = #{odId}
+            AND
+            order_detail.is_delete = 0
+    </select>
+
+    <select id="selectOrderDetailConditionByType" resultType="spiritray.common.pojo.PO.OrderDetail">
+        SELECT
+        order_detail.total_amount,
+        order_detail.address_msg,
+        order_detail.logistics_no
+        FROM
+        order_detail
+        WHERE
+        order_detail.store_id =#{storeId}
+        AND
+        order_detail.is_delete=0
+        <if test="type!=3">
+            AND
+            order_detail.state =#{type}
+        </if>
+        <if test="type==3">
+            AND
+            order_detail.state IN(3,4)
+        </if>
+        ORDER BY order_detail.total_amount
+    </select>
+
+    <select id="selectStoreOrderDetailByParam" resultType="spiritray.common.pojo.PO.OrderDetail">
+        SELECT *
+        FROM order_detail AS od JOIN `order` AS b
+        ON
+        od.order_number=b.order_number
+        WHERE
+        od.store_id=#{storeId}
+        AND
+        od.is_delete=0
+        AND
+        od.state=#{type}
+        <if test="params!=null">
+            <if test="params.startTime!=null">
+                AND
+                <![CDATA[ DATEDIFF(NOW(),b.order_date) <= #{params.startTime}]]>
+            </if>
+            <if test="params.totalMoneyFloor!=null">
+                AND
+                <![CDATA[od.total_amount >= #{params.totalMoneyFloor} ]]>
+            </if>
+            <if test="params.totalMoneyCeil!=null">
+                AND
+                <![CDATA[od.total_amount <= #{params.totalMoneyCeil}]]>
+            </if>
+            <if test="params.address!=null">
+                AND
+                od.address_msg LIKE "%${params.address}%"
+            </if>
+            <if test="params.takePhone!=null">
+                AND
+                od.address_msg LIKE "%${params.takePhone}%"
+            </if>
+            <if test="params.logistics!=null">
+                AND
+                od.logistics_no= #{params.logistics}
+            </if>
+            <if test="params.endTime!=null">
+                AND
+                <![CDATA[ DATEDIFF(NOW(),od.over_date) <= #{params.endTime} ]]>
+            </if>
+            <if test="params.isComment!=null and params.isComment==0">
+                AND
+                state=4
+            </if>
+            <if test="params.isComment!=null and params.isComment==1">
+                AND
+                state=3
+            </if>
+            <if test="params.reorder!=null and params.reorder.equals('startTime')">
+                ORDER BY b.order_date
+            </if>
+            <if test="params.reorder!=null and params.reorder.equals('totalMoney')">
+                ORDER BY od.total_amount
+            </if>
+            <if test="params.reorder!=null and params.reorder.equals('endTime')">
+                ORDER BY od.over_date
+            </if>
+        </if>
+    </select>
+
+    <select id="selectOrderDetailById" resultType="spiritray.common.pojo.PO.OrderDetail">
+        SELECT *
+        FROM
+            order_detail
+        WHERE
+            order_number = #{orderNumber}
+            AND
+            od_id = #{odId}
+            AND
+            is_delete = 0
+    </select>
+
+    <select id="selectOrderDetailInfo" resultType="spiritray.common.pojo.DTO.OrderDetailInfo">
+        SELECT *
+        FROM `order`
+            JOIN order_detail
+                ON
+                    `order`.order_number = order_detail.order_number
+        WHERE
+            order_detail.order_number = #{orderNumber}
+            AND
+            order_detail.od_id = #{odId}
+    </select>
+
 </mapper>

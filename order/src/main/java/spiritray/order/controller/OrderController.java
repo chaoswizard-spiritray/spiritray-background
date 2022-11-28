@@ -10,6 +10,7 @@ import spiritray.common.pojo.DTO.OrderBeforeCommodity;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SNMap;
 import spiritray.common.pojo.PO.Address;
+import spiritray.order.mapper.OrderDetailMapper;
 import spiritray.order.service.OrderService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -32,6 +33,9 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private OrderDetailMapper orderDetailMapper;
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -109,5 +113,37 @@ public class OrderController {
         return orderService.chanelOrderDetail(response, orderNumber, odId, (Long) session.getAttribute("phone"), request.getHeader("jwt"));
     }
 
+    /*修改订单状态为评论发布*/
+    @PutMapping("/state/publish")
+    public RpsMsg putOrderStateToPublish(String orderNumber, int odId, HttpSession session) {
+        return orderService.modifyOrderStateToPublish(orderNumber, odId, (Long) session.getAttribute("phone"));
+    }
 
+    /*获取指定订单详情信息*/
+    @GetMapping("/orderDetailInfo/{orderNumber}/{odId}")
+    public RpsMsg getOrderDetailInfo(@PathVariable String orderNumber, @PathVariable int odId) {
+        try {
+            return new RpsMsg().setData(orderDetailMapper.selectOrderDetailInfo(orderNumber, odId)).setStausCode(200);
+        } catch (Exception e) {
+            return new RpsMsg().setStausCode(300).setMsg("没有相关信息");
+        }
+    }
+
+    /*确认收货*/
+    @PutMapping("/suerOver")
+    public RpsMsg suerOrderOver(String orderNumber, int odId, HttpSession session) {
+        Long phone = (Long) session.getAttribute("phone");
+        //验证订单状态
+        try {
+            //如果订单状态不是待收货2或者查询异常就抛出错误
+            if (orderDetailMapper.selectOrderDetailStateByPhoneAndOrderNumber(orderNumber, odId, phone) != 2) {
+                return new RpsMsg().setMsg("无效订单").setStausCode(300);
+            }else {
+             //   orderService
+            }
+        } catch (Exception e) {
+            return new RpsMsg().setMsg("无效订单").setStausCode(300);
+        }
+    return null;
+    }
 }

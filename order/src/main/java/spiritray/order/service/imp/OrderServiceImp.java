@@ -3,6 +3,7 @@ package spiritray.order.service.imp;
 import cn.hutool.core.lang.UUID;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -268,6 +269,41 @@ public class OrderServiceImp implements OrderService {
         }
     }
 
+    @Override
+    public RpsMsg modifyOrderStateToPublish(String orderNumber, Integer odId, Long phone) {
+        //先验证买家是否订单细节记录是否存在
+        Integer state = orderDetailMapper.selectOrderDetailStateByPhoneAndOrderNumber(orderNumber, odId, phone);
+        if (state == null || state != 3) {
+            //如果订单细节不存在或者订单状态不是已收货未评价就返回错误信息
+            return new RpsMsg().setMsg("无效订单").setStausCode(300);
+        } else {
+            //否则就更新订单细节状态
+            if (orderDetailMapper.updateDetailStateById(orderNumber, odId, 4) == 1) {
+                return new RpsMsg().setMsg("修改成功").setStausCode(200);
+            } else {
+                return new RpsMsg().setMsg("系统繁忙").setStausCode(300);
+            }
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public RpsMsg suerOrderdetailOver(String orderNumber, Integer odId, Long phone) {
+        //修改订单状态
+        try {
+            int row = orderDetailMapper.updateDetailStateById(orderNumber, odId, 3);
+            if(row==0){
+                return new RpsMsg().setStausCode(300).setMsg("无效订单");
+            }else {
+                //修改成功，转账给商家
+
+            }
+        }catch (Exception e){
+            return new RpsMsg().setStausCode(300).setMsg("系统异常");
+        }
+        return null;
+    }
+
     @Transactional(rollbackFor = IllegalArgumentException.class)
     boolean saveOrderInfo(Order order, List<OrderDetail> orderDetails) {
         //插入数据
@@ -283,20 +319,5 @@ public class OrderServiceImp implements OrderService {
         }
     }
 
-    /*yungoos第三方支付信息拉取*/
-    private Object getPayData(int cate, Object param) {
-        //根据支付方式请求yungouos的支付接得到支付数据
-        MultiValueMap multiValueMap = new LinkedMultiValueMap();
-        multiValueMap.add("param", param);
-        HttpEntity httpEntity = new HttpEntity(multiValueMap, headers);
-        if (cate == 1) {
-            //请求支付宝支付数据
-            return restTemplate.exchange("http://localhost:8082/pay/app/data/ali", HttpMethod.PUT, httpEntity, RpsMsg.class).getBody().getData();
-        } else if (cate == 2) {
-            //请求微信支付数据
-            return restTemplate.exchange("http://localhost:8082/pay/app/data/wechat", HttpMethod.PUT, httpEntity, RpsMsg.class).getBody().getData();
-        } else {
-            return null;
-        }
-    }
+
 }

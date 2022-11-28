@@ -35,8 +35,8 @@ public class JWTInterceptor implements HandlerInterceptor {
         if ("OPTIONS".equals(request.getMethod())) {
             return true;
         } else {
-            request.setCharacterEncoding("utf-8");
-            response.setCharacterEncoding("utf-8");
+            //request.setCharacterEncoding("utf-8");
+            //response.setCharacterEncoding("utf-8");
             //注意！！！！因为前端是直接将数据库中的jwt进行取出来然后进行传递，且缓存中存储的JSON字符串，所以带有",必须要去除掉，不然JWT验证失败
             String jwt = request.getHeader("jwt");
             RpsMsg rpsMsg = new RpsMsg();

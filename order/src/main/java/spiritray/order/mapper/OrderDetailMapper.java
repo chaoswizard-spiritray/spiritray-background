@@ -2,7 +2,9 @@ package spiritray.order.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.springframework.stereotype.Repository;
+import spiritray.common.pojo.DTO.OrderDetailInfo;
 import spiritray.common.pojo.PO.OrderDetail;
 
 import java.util.List;
@@ -19,11 +21,28 @@ import java.util.Map;
 @Mapper
 @Repository
 public interface OrderDetailMapper {
+    /*获取指定订单的详细信息*/
+    public OrderDetailInfo selectOrderDetailInfo(@Param("orderNumber") String orderNumber, @Param("odId") int odId);
+    /*修改订单细节编号*/
+    public int updateOrderDetailLogisticsNo(@Param("orderNumber") String orderNumber, @Param("odId") int odId, @Param("storeId") String storeId, @Param("logisticsNo") String logisticsNo);
+
+    /*根据订单ID获取订单细节记录*/
+    public OrderDetail selectOrderDetailById(@Param("orderNumber") String orderNumber, @Param("odId") int odId);
+
+    /*获取指定条件下的店铺订单信息*/
+    public List<OrderDetail> selectStoreOrderDetailByParam(@Param("storeId") String storeId, @Param("type") Integer type, @Param("params") Map params);
+
+    /*获取指定店铺下的指定类型的订单细节记录的筛选条件记录按照总计费用进行排序*/
+    public List<OrderDetail> selectOrderDetailConditionByType(@Param("storeId") String storeId, @Param("type") Integer type);
+
     /*删除订单细节记录根据key*/
     public int updateDetailDeleteById(@Param("orderNumber") String orderNumber, @Param("odId") int odId);
 
     /*删除指定用户订单细节记录根据key*/
     public int updateDetailDeleteByIdAndPhone(@Param("orderNumber") String orderNumber, @Param("odId") int odId, @Param("phone") Long phone);
+
+    /*查询指定指定phone下指定的未删除的订单细节记录的状态*/
+    public Integer selectOrderDetailStateByPhoneAndOrderNumber(@Param("orderNumber") String orderNumber, @Param("odId") int odId, @Param("phone") Long phone);
 
     /*查询指定用户指定指定状态的信息*/
     public List<OrderDetail> selectOrderDetailByPhoneAndState(@Param("phone") long phone, @Param("state") int state);

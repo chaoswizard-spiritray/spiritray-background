@@ -201,4 +201,12 @@ public class ThridPayController {
         //实时返回
         return new AppPayRps().setCode(1).setMsg("退款请求成功");
     }
+
+    /*转账调用地址*/
+    @PutMapping("/transfer")
+    public RpsMsg transfer(String param, int accaId) {
+
+    return null;
+    }
+
 }

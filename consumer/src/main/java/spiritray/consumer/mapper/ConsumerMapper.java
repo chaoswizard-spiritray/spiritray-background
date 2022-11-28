@@ -3,10 +3,12 @@ package spiritray.consumer.mapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
+import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.Address;
 import spiritray.common.pojo.PO.Consumer;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * ClassName:ConsumerMapper
@@ -21,6 +23,9 @@ import java.util.List;
 public interface ConsumerMapper {
     /*查询买家信息通过买家*/
     public Consumer selectConsumerByConsumer(@Param("consumer") Consumer consumer);
+
+    /*批量查询买家昵称、头像*/
+    public List<Consumer> selectNameAndHeadByPhone(@Param("phones") List phones);
 
     /*插入买家信息*/
     public int insertConsumer(@Param("consumer") Consumer consumer);
