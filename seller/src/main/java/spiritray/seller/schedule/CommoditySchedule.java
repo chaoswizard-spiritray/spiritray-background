@@ -44,4 +44,6 @@ public class CommoditySchedule {
             redisTemplate.opsForValue().getAndDelete(string);
         }
     }
+
+    /*每天凌晨2点将新增的商品种类、商品名商品属性值、商品*/
 }

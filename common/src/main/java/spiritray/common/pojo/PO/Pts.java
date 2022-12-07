@@ -21,9 +21,10 @@ import java.sql.Timestamp;
 @Accessors(chain = true)
 public class Pts {
     private String ptsId;
+    private String payNo;
     private String payAccount;
     private String getAccount;
-    private String payMoney;
+    private Float payMoney;
     private String desc;
     private Timestamp addTime;
     private Timestamp payTime;

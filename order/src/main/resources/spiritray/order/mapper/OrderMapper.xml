@@ -41,4 +41,12 @@
         WHERE
             order_number = #{orderId}
     </select>
+
+    <select id="selectOrderPhoneByOrderNumber" resultType="java.lang.Long">
+        SELECT `order`.consumer_phone
+        FROM
+            `order`
+        WHERE
+            order_number = #{orderId}
+    </select>
 </mapper>

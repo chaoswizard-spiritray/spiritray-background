@@ -209,4 +209,19 @@
         WHERE
             commodity_id = #{commodityId}
     </select>
+
+    <select id="selectCommodityCateIdByCommoditys" resultType="java.lang.Integer">
+        SELECT DISTINCT category_id
+        FROM
+        commodity
+        WHERE
+        status_code=1
+        <if test="commodityIds!=null">
+            AND
+            commodity_id IN
+            <foreach collection="commodityIds" open="(" separator="," close=")" item="commodityId">
+                #{commodityId}
+            </foreach>
+        </if>
+    </select>
 </mapper>

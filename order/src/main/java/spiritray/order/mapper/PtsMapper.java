@@ -16,5 +16,11 @@ import spiritray.common.pojo.PO.Pts;
 @Mapper
 @Repository
 public interface PtsMapper {
+    /*查询转账信息通过ordernumber*/
     public Pts selectPtsByOrderNumber(@Param("orderNumber") String orderNumber);
+
+    /*插入转账信息*/
+    public int insertPts(@Param("pts") Pts pts);
+
+    /**/
 }

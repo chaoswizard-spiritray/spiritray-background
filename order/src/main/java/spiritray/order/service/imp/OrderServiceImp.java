@@ -30,9 +30,12 @@ import spiritray.order.service.OrderService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,6 +58,15 @@ public class OrderServiceImp implements OrderService {
     @Autowired
     @Qualifier("orderTokens")
     private Map map;
+
+    @Autowired
+    @Qualifier("threadPool")
+    private ThreadPoolExecutor threadPoolExecutor;//自定义线程池
+
+    @Autowired
+    @Qualifier("transferFail")
+    private List transferFail;//转账失败集合
+
 
     @Autowired
     private HttpHeaders headers;
@@ -288,20 +300,27 @@ public class OrderServiceImp implements OrderService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public RpsMsg suerOrderdetailOver(String orderNumber, Integer odId, Long phone) {
-        //修改订单状态
-        try {
-            int row = orderDetailMapper.updateDetailStateById(orderNumber, odId, 3);
-            if(row==0){
-                return new RpsMsg().setStausCode(300).setMsg("无效订单");
-            }else {
-                //修改成功，转账给商家
-
+    public RpsMsg suerOrderdetailOver(String orderNumber, Integer odId, HttpServletResponse response) {
+        //修改订单状态以及结束日期
+        int row = orderDetailMapper.updateDetailStateAndOverDateById(orderNumber, odId, new Timestamp(new Date().getTime()));
+        if (row == 0) {
+            return new RpsMsg().setStausCode(300).setMsg("无效订单");
+        } else {
+            //进行转账
+            MultiValueMap multiValueMap = new LinkedMultiValueMap();
+            multiValueMap.add("orderNumber", orderNumber);
+            multiValueMap.add("odId", odId);
+            HttpEntity entity = new HttpEntity(multiValueMap, headers);
+            ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(ORDER_URL + "/order/pay/detail/trans", HttpMethod.POST, entity, RpsMsg.class);
+            //如果请求存在故障，抛出异常
+            if (!responseEntity.getStatusCode().is2xxSuccessful() || responseEntity.getBody().getStausCode() == 300) {
+                throw new IllegalArgumentException();
             }
-        }catch (Exception e){
-            return new RpsMsg().setStausCode(300).setMsg("系统异常");
+            if (responseEntity.getBody().getStausCode() == 200) {
+                return new RpsMsg().setStausCode(200).setMsg("确认收货成功");
+            }
+            return new RpsMsg().setStausCode(300).setMsg("系统繁忙");
         }
-        return null;
     }
 
     @Transactional(rollbackFor = IllegalArgumentException.class)

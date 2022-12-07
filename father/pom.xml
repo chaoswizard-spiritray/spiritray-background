@@ -35,6 +35,27 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
+        <!--分词库依赖-->
+        <!--<dependency>-->
+            <!--<groupId>org.apdplat</groupId>-->
+            <!--<artifactId>word</artifactId>-->
+            <!--<version>1.3</version>-->
+            <!--<exclusions>-->
+                <!--<exclusion>-->
+                    <!--<groupId>org.slf4j</groupId>-->
+                    <!--<artifactId>slf4j-api</artifactId>-->
+                <!--</exclusion>-->
+                <!--<exclusion>-->
+                    <!--<groupId>ch.qos.logback</groupId>-->
+                    <!--<artifactId>logback-classic</artifactId>-->
+                <!--</exclusion>-->
+            <!--</exclusions>-->
+        <!--</dependency>-->
+        <dependency>
+            <groupId>com.huaban</groupId>
+            <artifactId>jieba-analysis</artifactId>
+            <version>1.0.2</version>
+        </dependency>
         <!--web服务依赖-->
         <dependency>
             <groupId>org.springframework.boot</groupId>

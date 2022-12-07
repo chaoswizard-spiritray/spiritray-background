@@ -21,6 +21,7 @@ import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.Cpi;
 import spiritray.common.pojo.PO.Pbi;
+import spiritray.common.pojo.PO.Pts;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -204,9 +205,37 @@ public class ThridPayController {
 
     /*转账调用地址*/
     @PutMapping("/transfer")
-    public RpsMsg transfer(String param, int accaId) {
-
-    return null;
+    public RpsMsg transfer(String param, String notifyUrl) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Pts pts = JSON.parseObject(param, Pts.class);
+                pts.setAddTime(new Timestamp(new Date().getTime()))
+                        .setPayStatus(1)
+                        .setPayTime(new Timestamp(new Date().getTime() + 1000))
+                        .setPayNo(String.valueOf(UUID.randomUUID()));
+                //调用回调地址
+                boolean flag = true;
+                ResponseEntity<RpsMsg> responseEntity = null;
+                MultiValueMap multiValueMap = new LinkedMultiValueMap<>();
+                multiValueMap.add("param", JSON.toJSONString(pts));
+                multiValueMap.add("code", 1);
+                while (flag) {
+                    responseEntity = restTemplate.exchange(notifyUrl, HttpMethod.POST, new HttpEntity<>(multiValueMap, new HttpHeaders()), RpsMsg.class);
+                    if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                        if (responseEntity.getBody().getData().equals("SUCCESS")) {
+                            flag = false;
+                        }
+                    }
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+        return new RpsMsg().setMsg("转账发起成功").setStausCode(200);
     }
 
 }

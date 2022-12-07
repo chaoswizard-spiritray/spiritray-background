@@ -22,4 +22,7 @@ public interface CommentService {
 
     /*获取指定商品的评论条数*/
     public RpsMsg queryCommentCountsByCommodityIdAndType(String commodityId, int type);
+
+    /*获取指定买家的所有评论信息*/
+    public RpsMsg queryCommentByConsumerPhone(Long phone);
 }

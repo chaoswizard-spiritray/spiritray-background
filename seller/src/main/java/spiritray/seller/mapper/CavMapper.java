@@ -22,6 +22,9 @@ public interface CavMapper {
     /*通过种类id查询商品种类信息*/
     public List<Category> selectCategoryById(int id);
 
+    /*批量插入属性*/
+    public int insertAttributes(@Param("categoryId") long categoryId, @Param("attributes") List<Attribute> attributes);
+
     /*通过种类id查询其属性*/
     public List<Attribute> selectAttributeByCategoryId(int categoryId);
 

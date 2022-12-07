@@ -21,6 +21,9 @@ import java.util.Map;
 @Mapper
 @Repository
 public interface ConsumerMapper {
+
+    /*通过电话获取邮箱*/
+    public String selectEmailByPhone(@Param("phone") Long phone);
     /*查询买家信息通过买家*/
     public Consumer selectConsumerByConsumer(@Param("consumer") Consumer consumer);
 

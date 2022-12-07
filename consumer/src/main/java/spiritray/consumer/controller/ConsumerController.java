@@ -6,8 +6,8 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.digest.MD5;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import javafx.geometry.Pos;
 import lombok.SneakyThrows;
-import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -27,7 +27,6 @@ import spiritray.common.pojo.BO.MsgCode;
 import spiritray.common.pojo.DTO.LSS;
 import spiritray.common.pojo.DTO.RegisterDTO;
 import spiritray.common.pojo.DTO.RpsMsg;
-import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.Address;
 import spiritray.common.pojo.PO.Consumer;
 import spiritray.common.tool.CodeTool;
@@ -164,15 +163,18 @@ public class ConsumerController {
     }
 
     /*找回密码*/
-    @RequestMapping(value = "/info/backPassword", method = RequestMethod.PUT)
-    public RpsMsg backPassward(String password, String email, String code, HttpSession httpSession) {
-        MsgCode realCode = (MsgCode) redisTemplate.opsForHash().get("emailCodes", email);
-        if (realCode == null || (!CodeTool.isLive(realCode, code)) || (!realCode.equals(code))) {
-            redisTemplate.opsForHash().delete("emailCodes", email);
+    @PostMapping("/info/backpassword")
+    public RpsMsg backPassward(String params) {
+        JSONObject jsonObject = JSON.parseObject(params);
+        System.out.println(redisTemplate.opsForHash().entries("emailCodes"));
+        System.out.println(jsonObject.get("email"));
+        MsgCode realCode = (MsgCode) redisTemplate.opsForHash().get("emailCodes", jsonObject.get("email"));
+        if (realCode == null || (!CodeTool.isLive(realCode, String.valueOf(jsonObject.get("code")))) || (!realCode.equals(jsonObject.get("code")))) {
+            redisTemplate.opsForHash().delete("emailCodes", jsonObject.get("email"));
             return new RpsMsg().setStausCode(300).setMsg("设置失败，验证码无效");
         }
-        redisTemplate.opsForHash().delete("emailCodes", email);
-        return consumerService.modifyConsumer(new Consumer().setConsumerPhone((Long) httpSession.getAttribute("phone")).setConsumerPassword(new String(MD5.create().digest(password))));
+        redisTemplate.opsForHash().delete("emailCodes", jsonObject.get("email"));
+        return consumerService.modifyConsumer(new Consumer().setConsumerPhone((Long) jsonObject.get("phone")).setConsumerPassword(new String(MD5.create().digest(String.valueOf(jsonObject.get("email"))))));
     }
 
     /*查询收货地址*/
@@ -210,19 +212,24 @@ public class ConsumerController {
         //生成随机验证码
         LineCaptcha lineCaptcha = CaptchaUtil.createLineCaptcha(60, 30, 4, 20);
         //封装为验证码信息存储在session中,有效时间60秒
-        session.setAttribute("code", new MsgCode(lineCaptcha.getCode(), System.currentTimeMillis(), 60000));
+        session.setAttribute("code", new MsgCode(lineCaptcha.getCode(), System.currentTimeMillis(), 120000));
         HashMap map = new HashMap();
         map.put("data", "data:image/" + "jpeg" + ";base64," + lineCaptcha.getImageBase64());
         return map;
     }
 
     /*发送电子邮件验证码*/
-    @GetMapping("/emailCode/{sendTo}")
-    public RpsMsg emailCode(@PathVariable String sendTo) {
+    @GetMapping("/emailCode/{phone}")
+    public RpsMsg emailCode(@PathVariable Long phone) {
+        //获取邮箱
+        String email = consumerMapper.selectEmailByPhone(phone);
+        if (email == null) {
+            return new RpsMsg().setMsg("未绑定邮箱").setStausCode(300);
+        }
         MsgCode msgCode = new MsgCode(RandomUtil.randomString(4), System.currentTimeMillis(), 60000);
-        redisTemplate.opsForHash().put("emailCodes", sendTo, msgCode);
-        javaMailSender.send(EmailSendTool.getSimpleMailMessage(sendFrom, sendTo, "spiritray密码重置", "本次验证码为" + msgCode.getCode() + "有效时间为60秒"));
-        return new RpsMsg().setMsg("邮件发送成功，注意查收").setStausCode(200);
+        redisTemplate.opsForHash().put("emailCodes", email, msgCode);
+        javaMailSender.send(EmailSendTool.getSimpleMailMessage(sendFrom, email, "spiritray密码重置", "本次验证码为" + msgCode.getCode() + "有效时间为120秒"));
+        return new RpsMsg().setMsg("邮件发送成功，及时查收").setStausCode(200).setData(email);
     }
 
     /*批量获取买家昵称和头像*/
@@ -237,7 +244,7 @@ public class ConsumerController {
         for (Long phone : phones) {
             for (Consumer consumer : consumers) {
                 if (phone.longValue() == consumer.getConsumerPhone()) {
-                    result.add(new LSS(phone, consumer.getConsumerHead(), consumer.getConsumerNickname()));
+                    result.add(new LSS(phone, consumer.getConsumerNickname(), consumer.getConsumerHead()));
                 }
             }
         }

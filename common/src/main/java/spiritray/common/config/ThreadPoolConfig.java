@@ -2,16 +2,23 @@ package spiritray.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import spiritray.common.factory.SlideFactory;
 import spiritray.common.pojo.DTO.SSMap;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ClassName:ThreaPoolConfig
  * Package:spiritray.common.config
  * Description:
- *  这个配置类配置一些公共的任务集合以及线程池，这些集合我们需要使用Java的线程安全集合
+ * 这个配置类配置一些公共的任务集合以及线程池，这些集合我们需要使用Java的线程安全集合
  *
  * @Date:2022/11/24 21:51
  * @Author:灵@email
@@ -34,6 +41,18 @@ public class ThreadPoolConfig {
     @Bean("transferFail")
     public List<SSMap> getTransferTask() {
         return Collections.synchronizedList(new ArrayList<>());
+    }
+
+    //任务执行线程池，主要用于处理系统中的异步任务
+    @Bean("threadPool")
+    public ThreadPoolExecutor getThreadPoolExecutor() {
+        return new ThreadPoolExecutor(2, 4, 10, TimeUnit.SECONDS, new LinkedBlockingDeque<>(), new ThreadPoolExecutor.AbortPolicy());
+    }
+
+    //轮播图工厂
+    @Bean("slideFactory")
+    public SlideFactory getSlideFactory() {
+        return new SlideFactory();
     }
 
 }

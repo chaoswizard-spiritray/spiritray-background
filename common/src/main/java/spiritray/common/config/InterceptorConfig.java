@@ -99,6 +99,7 @@ public class InterceptorConfig implements WebMvcConfigurer {
         registry.addInterceptor(getJwtInterceptor())
                 .addPathPatterns("/consumer/**")
                 .excludePathPatterns("/consumer/register")
+                .excludePathPatterns("/consumer/info/backpassword")
                 .excludePathPatterns("/consumer/code")
                 .excludePathPatterns("/consumer/login/**")
                 .excludePathPatterns("/consumer/emailCode/**")
@@ -106,8 +107,10 @@ public class InterceptorConfig implements WebMvcConfigurer {
                 .addPathPatterns("/seller/enter")
                 .addPathPatterns("/store/**")
                 //.addPathPatterns("/commodity/**")
+                .excludePathPatterns("/store/account/receive/**")
                 .excludePathPatterns("/commodity/consumer/**")
                 .excludePathPatterns("/store/storeInf/status/**")
+                .excludePathPatterns("/store/storeInf/**")
                 .excludePathPatterns("/store/storeInf/license/**")
                 .excludePathPatterns("/store/storeLicenseSimple/**")
                 .excludePathPatterns("/store/headAndName/**")
@@ -123,6 +126,10 @@ public class InterceptorConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/store/storeInf/**")
                 .excludePathPatterns("/store/storeLicenseSimple/**")
                 .excludePathPatterns("/store/headAndName/**")
+                .excludePathPatterns("/store/account/receive/**")
+                .addPathPatterns("/plant/slide/store/get")
+                .addPathPatterns("/plant/slide/store/up")
+                .addPathPatterns("/plant/slide/store/up/over")
                 .addPathPatterns("/commodity/**")
                 .excludePathPatterns("/commodity/commodityName/**")
                 .excludePathPatterns("/commodity/order/**")
@@ -132,6 +139,7 @@ public class InterceptorConfig implements WebMvcConfigurer {
         //添加plat账户查询拦截器
         registry.addInterceptor(getPlatAccountInterceptor())
                 .addPathPatterns("/plant/account/**")
+                .addPathPatterns("/plant/slide/factory/config")
                 .excludePathPatterns("/plant/account/category/**")
                 .excludePathPatterns("/plant/account/cate/**");
 

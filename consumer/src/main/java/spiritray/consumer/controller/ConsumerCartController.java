@@ -54,6 +54,7 @@ public class ConsumerCartController {
     /*清空购物车*/
     @PutMapping("/clear")
     public RpsMsg clearCart(HttpSession session) {
+        System.out.println((Long) session.getAttribute("phone"));
         if (cartMapper.deleteAll((Long) session.getAttribute("phone")) > 0) {
             return new RpsMsg().setStausCode(200).setMsg("已清空");
         } else {

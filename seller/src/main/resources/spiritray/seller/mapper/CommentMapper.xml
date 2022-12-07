@@ -5,27 +5,27 @@
         -- 最近七天的评论
         <if test="type==1">
             AND
-            TIMESTAMPADD(DAY,start_date,NOW())>=7
+            <![CDATA[ TIMESTAMPDIFF(DAY,NOW(),start_date)<=7 ]]>
         </if>
         -- 星级大于等于3为好评
         <if test="type==2">
             AND
-            star_level>=3
+            <![CDATA[  star_level>=3 ]]>
         </if>
         -- 星级小于3为差评
         <if test="type==3">
             AND
-            star_level &lt; 3
+            <![CDATA[  star_level < 3 ]]>
         </if>
         -- 附图不为空
         <if test="type==4">
             AND
-            attched_map IS NOT NULL
+            attched_map!=""
         </if>
         -- 按买家电话分组，并且评论数目大于1的说明多次购买
         <if test="type==5">
             GROUP BY `comment`.consumer_phone
-            HAVING COUNT(*)>1
+            <![CDATA[ HAVING COUNT(*)>1 ]]>
         </if>
     </sql>
 
@@ -60,6 +60,7 @@
         SELECT
         comment_no,
         comment_content,
+        is_anonymous,
         attched_map,
         star_level,
         start_date,
@@ -68,7 +69,35 @@
         consumer_phone
         FROM
         `comment`
+        WHERE
+        commodity_id = #{commodityId}
         <include refid="typeCondition"></include>
         LIMIT #{pageNo},#{pageNum}
+    </select>
+
+    <select id="selectCommentCountByConsumerPhone" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM
+            `comment`
+        WHERE
+            `comment`.consumer_phone = #{phone}
+    </select>
+
+    <select id="selectConsumerAllCommentByConsumerPhone" resultType="spiritray.common.pojo.PO.Comment">
+        SELECT *
+        FROM
+            `comment`
+        WHERE
+            `comment`.consumer_phone = #{phone}
+    </select>
+
+    <select id="selectCommentNoByOrderNumber" resultType="java.lang.String">
+        SELECT comment_no
+        FROM
+            `comment`
+        WHERE
+            order_number = #{orderNumber}
+            AND
+            od_id = #{odId}
     </select>
 </mapper>

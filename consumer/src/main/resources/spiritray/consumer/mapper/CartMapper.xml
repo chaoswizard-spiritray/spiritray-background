@@ -21,7 +21,7 @@
     <delete id="deleteAll">
         DELETE FROM
             cart
-        WHERE cart.consumer_phone = #{cart.consumerPhone}
+        WHERE cart.consumer_phone = #{phone}
     </delete>
 
     <select id="selectCartByPhone" resultType="spiritray.common.pojo.PO.Cart">

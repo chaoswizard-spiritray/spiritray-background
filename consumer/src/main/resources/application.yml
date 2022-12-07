@@ -23,7 +23,7 @@ spring:
   mail:
     host: smtp.qq.com #smtp服务器域名
     username: 1790926041@qq.com #发送方邮箱号
-    password: uurswyaswwycbgej #发送方授权码
+    password: rebxahonqlvrcehh #发送方授权码
     properties:
       mail:
         smtp:

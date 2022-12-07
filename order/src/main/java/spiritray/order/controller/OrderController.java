@@ -18,6 +18,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
  * ClassName:OrderController
@@ -41,6 +43,12 @@ public class OrderController {
     private RedisTemplate redisTemplate;
 
     private final String Order_KEY_PREFIX = "order";//redis订单细节编号为key的前缀
+
+    /*查询指定用户购买的商品id*/
+    @GetMapping("/commodityId/{phone}")
+    public RpsMsg getAllOrderCommodityIdByPhone(@PathVariable long phone) {
+        return new RpsMsg().setStausCode(200).setData(orderDetailMapper.selectAllOrderCommodityIdByPhone(phone).stream().distinct().collect(Collectors.toList()));
+    }
 
     /*查询指定商品数组的过期时间*/
     @GetMapping("/overtime")
@@ -131,19 +139,19 @@ public class OrderController {
 
     /*确认收货*/
     @PutMapping("/suerOver")
-    public RpsMsg suerOrderOver(String orderNumber, int odId, HttpSession session) {
+    public RpsMsg suerOrderOver(String orderNumber, int odId, HttpSession session, HttpServletResponse response) {
         Long phone = (Long) session.getAttribute("phone");
         //验证订单状态
         try {
             //如果订单状态不是待收货2或者查询异常就抛出错误
             if (orderDetailMapper.selectOrderDetailStateByPhoneAndOrderNumber(orderNumber, odId, phone) != 2) {
                 return new RpsMsg().setMsg("无效订单").setStausCode(300);
-            }else {
-             //   orderService
+            } else {
+                //订单收货，并转账给商家
+                return orderService.suerOrderdetailOver(orderNumber, odId, response);
             }
         } catch (Exception e) {
-            return new RpsMsg().setMsg("无效订单").setStausCode(300);
+            return new RpsMsg().setMsg("系统繁忙").setStausCode(300);
         }
-    return null;
     }
 }

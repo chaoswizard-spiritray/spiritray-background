@@ -35,7 +35,7 @@
             plant_account.is_useable=#{account.isUseable}
         </set>
         <where>
-            plant_account.pa_id = #{account.pa_id}
+            plant_account.pa_id = #{account.paId}
         </where>
     </update>
 

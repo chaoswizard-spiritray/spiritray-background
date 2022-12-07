@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.CategoryMapper">
+    <insert id="insertCategory" useGeneratedKeys="true" keyProperty="cate.categoryId">
+        INSERT INTO category (category_name, father) VALUES (#{cate.categoryName}, #{cate.father});
+    </insert>
+
+    <select id="selectCategoryIdByToken" resultType="java.lang.Integer">
+        SELECT
+            category.category_id,
+            category_name
+        FROM category
+        WHERE
+            category_name REGEXP #{regex};
+    </select>
+
+    <select id="selectCategoryChildIdAndFatherIdByFatherId" resultType="spiritray.common.pojo.PO.Category">
+        SELECT category.father,category.category_id
+        FROM category
+        WHERE
+        category_id IN
+        <foreach collection="ids" open="(" item="id" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+</mapper>

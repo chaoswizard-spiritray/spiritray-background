@@ -1,6 +1,7 @@
 package spiritray.plant.msg;
 
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,16 +17,18 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import spiritray.common.pojo.BO.CommonInputStreamResource;
 import spiritray.common.pojo.BO.FileUploadInterface;
+import spiritray.common.pojo.DTO.LSS;
 import spiritray.common.pojo.DTO.MsgHomeInfo;
 import spiritray.common.pojo.DTO.RpsMsg;
-import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.Msg;
 import spiritray.plant.mapper.MsgMapper;
 
 import javax.servlet.http.HttpSession;
 import javax.websocket.Session;
 import java.io.IOException;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -136,61 +139,64 @@ public class PullMesController {
      * */
     @GetMapping("/home/{receiver}/{role}")
     public RpsMsg pullMsgPageInfo(@PathVariable Long receiver, @PathVariable int role) {
-//        try {
-        List<MsgHomeInfo> msgHomeInfos = msgMapper.selectMsgHomeInfoByReceiver(receiver, role, role == 0 ? 0 : (role == 1 ? 2 : 1));
-        if (msgHomeInfos == null || msgHomeInfos.size() == 0) {
-            return new RpsMsg().setStausCode(200);
-        } else {
-            //如果是平台管理员在拉取消息，我们直接返回，并且它只有系统消息
-            if (role == 0) {
-                return new RpsMsg().setStausCode(200).setData(msgHomeInfos);
-            }
-            //先过滤出非系统消息的sender部分
-            List<Long> senders = msgHomeInfos.stream().filter(s -> s.getSender() != 0).map(MsgHomeInfo::getSender).collect(Collectors.toList());
-            //获取头像和名称
-            if (role == 1) {
-                //如果拉取信息的是买家，那么就查询商家的店铺名和头像
-                MultiValueMap multiValueMap = new LinkedMultiValueMap();
-                ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(SELLER_URL + "/store/headAndName/many?phones=" + JSON.toJSONString(senders), HttpMethod.GET, new HttpEntity<>(multiValueMap, httpHeaders), RpsMsg.class);
-                Map<Long, SSMap> mapMap = JSONObject.parseObject(JSON.toJSONString(responseEntity.getBody().getData()), HashMap.class);
-                for (MsgHomeInfo msgHomeInfo : msgHomeInfos) {
-                   final long s=msgHomeInfo.getSender();
-                    System.out.println(mapMap.get(s).getAttributeValue());
-                   msgHomeInfo.setSendName(mapMap.get(s).getAttributeValue());
-                   msgHomeInfo.setSendHead(mapMap.get(msgHomeInfo.getSender().longValue()).getAttributeName());
+        try {
+            List<MsgHomeInfo> msgHomeInfos = msgMapper.selectMsgHomeInfoByReceiver(receiver, role);
+            if (msgHomeInfos == null || msgHomeInfos.size() == 0) {
+                return new RpsMsg().setStausCode(200);
+            } else {
+                //如果是平台管理员在拉取消息，我们直接返回，并且它只有系统消息
+                if (role == 0) {
+                    return new RpsMsg().setStausCode(200).setData(msgHomeInfos);
                 }
-                //排序将系统放在最前面，其他按照未读、时间优先级进行排序
-                msgHomeInfos.sort(comparator);
-                return new RpsMsg().setData(msgHomeInfos).setMsg("查询成功").setStausCode(200);
-            }
-            if (role == 2) {
-                //如果拉取信息的是商家，那么就查询买家的昵称和头像
-                MultiValueMap multiValueMap = new LinkedMultiValueMap();
-                ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(CONSUMER_URL + "/consumer/headAndName/many?consumerPhones=" + JSON.toJSONString(senders), HttpMethod.GET, new HttpEntity<>(multiValueMap, httpHeaders), RpsMsg.class);
-                Map<Long, SSMap> mapMap = (Map<Long, SSMap>) responseEntity.getBody().getData();
-                for (MsgHomeInfo msgHomeInfo : msgHomeInfos) {
-                    mapMap.entrySet().stream().peek(s -> {
-                        if (s.getKey().longValue() == msgHomeInfo.getSender().longValue()) {
-                            msgHomeInfo.setSendName(mapMap.get(msgHomeInfo.getSender().longValue()).getAttributeValue());
-                            msgHomeInfo.setSendHead(mapMap.get(msgHomeInfo.getSender().longValue()).getAttributeName());
+                //先过滤出非系统消息的sender部分并去重
+                List<Long> senders = msgHomeInfos.stream().filter(s -> s.getSender() != 0).map(MsgHomeInfo::getSender).collect(Collectors.toList());
+                //获取头像和名称
+                if (role == 1) {
+                    //如果拉取信息的是买家，那么就查询商家的店铺名和头像
+                    MultiValueMap multiValueMap = new LinkedMultiValueMap();
+                    ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(SELLER_URL + "/store/headAndName/many?phones=" + JSON.toJSONString(senders), HttpMethod.GET, new HttpEntity<>(multiValueMap, httpHeaders), RpsMsg.class);
+                    //先将JSONObject序列化为JOSN，然后用JSON将其转换为数组，再将数组转换为指定类型的Java数组。
+                    List<LSS> lsses = JSON.parseArray(JSON.toJSONString(responseEntity.getBody().getData())).toJavaList(LSS.class);
+                    for (MsgHomeInfo msgHomeInfo : msgHomeInfos) {
+                        for (LSS lss : lsses) {
+                            if (lss.getPhone().longValue() == msgHomeInfo.getSender().longValue()) {
+                                msgHomeInfo.setSendName(lss.getName());
+                                msgHomeInfo.setSendHead(lss.getHead());
+                            }
                         }
-                    }).collect(Collectors.toList());
+                    }
+                    //排序将系统放在最前面，其他按照未读、时间优先级进行排序
+                    msgHomeInfos.sort(comparator);
+                    return new RpsMsg().setData(msgHomeInfos).setMsg("查询成功").setStausCode(200);
                 }
-                msgHomeInfos.sort(comparator);
-                return new RpsMsg().setData(msgHomeInfos).setMsg("查询成功").setStausCode(200);
+                if (role == 2) {
+                    //如果拉取信息的是商家，那么就查询买家的昵称和头像
+                    MultiValueMap multiValueMap = new LinkedMultiValueMap();
+                    ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(CONSUMER_URL + "/consumer/headAndName/many?consumerPhones=" + JSON.toJSONString(senders), HttpMethod.GET, new HttpEntity<>(multiValueMap, httpHeaders), RpsMsg.class);
+                    List<LSS> lsses = JSON.parseArray(JSON.toJSONString(responseEntity.getBody().getData())).toJavaList(LSS.class);
+                    for (MsgHomeInfo msgHomeInfo : msgHomeInfos) {
+                        for (LSS lss : lsses) {
+                            if (lss.getPhone().longValue() == msgHomeInfo.getSender().longValue()) {
+                                msgHomeInfo.setSendName(lss.getName());
+                                msgHomeInfo.setSendHead(lss.getHead());
+                            }
+                        }
+                    }
+                    msgHomeInfos.sort(comparator);
+                    return new RpsMsg().setData(msgHomeInfos).setMsg("查询成功").setStausCode(200);
+                }
+                return new RpsMsg().setStausCode(300).setMsg("违规操作");
             }
-            return new RpsMsg().setStausCode(300).setMsg("违规操作");
+        } catch (Exception e) {
+            return new RpsMsg().setStausCode(300).setMsg("系统异常");
         }
-//        } catch (Exception e) {
-//            return new RpsMsg().setStausCode(300).setMsg("系统异常");
-//        }
     }
 
     /*当前会话用户获取指定发送者的消息*/
     @GetMapping("/{sender}/{pageNo}/{pageNum}")
     public RpsMsg getSenderMsg(HttpSession session, @PathVariable Long sender, @PathVariable Integer pageNo,
                                @PathVariable int pageNum) {
-        List<Msg> temp = msgMapper.selectMsgBySenderAndPage((Long) session.getAttribute("phone"), sender, pageNo, pageNum);
+        List<Msg> temp = msgMapper.selectMsgBySenderAndPage((Long) session.getAttribute("phone"), sender, pageNo * pageNum, pageNum);
         temp.sort(new Comparator<Msg>() {
             @Override
             public int compare(Msg o1, Msg o2) {
@@ -221,7 +227,7 @@ public class PullMesController {
     /*修改指定消息的阅读状态*/
     @PutMapping("/readed/{msgId}")
     public RpsMsg readedMsg(@PathVariable String msgId, HttpSession session) {
-        msgMapper.updateMsgIsDelete((Long) session.getAttribute("phone"), msgId);
+        msgMapper.updateMsgReaded(msgId);
         return new RpsMsg().setStausCode(200).setMsg("消息已读");
     }
 
@@ -257,6 +263,7 @@ public class PullMesController {
         //保存信息
         int i = msgMapper.insertMsgSimple(msg1);
         if (i == 1) {
+            pushMsg(msg1);
             return new RpsMsg().setMsg("发送成功").setStausCode(200).setData(msg1);
         }
         return new RpsMsg().setStausCode(300).setMsg("发送失败");
@@ -288,7 +295,7 @@ public class PullMesController {
             }
             break;
             case 1: {
-                //如果是平台接收
+                //如果是买家接收
                 Long receiver = msg.getReceiver();
                 //先判断是否在应用
                 if (!isUseApp(receiver, consumerPWMap)) {
@@ -305,10 +312,25 @@ public class PullMesController {
                         sendMsg(receiver, consumerPWMap, JSON.toJSONString(msg));
                     }
                 }
+                //如果是在细节处，我们就将消息已读反馈给发送方
+                //并向消息发送端发送信息已读消息
+                Session session1 = stayMsgDetailSeller.get(msg.getSender());
+                if (session1 != null) {
+                    try {
+                        session1.getBasicRemote().sendText(msg.getMsgId() + "is-readed");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (msg.getSenderRole() == 1) {
+
+                } else if (msg.getSenderRole() == 2) {
+
+                }
             }
             break;
             case 2: {
-                //如果是平台接收
+                //如果是商家接收
                 Long receiver = msg.getReceiver();
                 //先判断是否在应用
                 if (!isUseApp(receiver, sellerPWMap)) {
@@ -323,6 +345,14 @@ public class PullMesController {
                     if (!success) {
                         //如果不在标签页，就最后执行一次sendMsg
                         sendMsg(receiver, sellerPWMap, JSON.toJSONString(msg));
+                    }
+                }
+                Session session1 = stayMsgDetailConsumer.get(msg.getSender());
+                if (session1 != null) {
+                    try {
+                        session1.getBasicRemote().sendText(msg.getMsgId() + "is-readed");
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -356,6 +386,4 @@ public class PullMesController {
             }
         }
     }
-
-
 }

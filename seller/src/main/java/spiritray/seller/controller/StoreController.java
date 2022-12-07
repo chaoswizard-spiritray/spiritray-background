@@ -135,7 +135,7 @@ public class StoreController {
     }
 
     /*获取指定账户类型的正在使用的收款账户*/
-    @GetMapping("/account/{storeId}/{accaId}")
+    @GetMapping("/account/receive/{storeId}/{accaId}")
     public RpsMsg getAccountByAccaId(@PathVariable String storeId, @PathVariable int accaId) {
         return storeService.queryCollectionAccountByStoreIdAndAccaId(storeId, accaId);
     }

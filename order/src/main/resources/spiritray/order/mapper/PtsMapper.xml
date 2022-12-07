@@ -1,6 +1,38 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="spiritray.order.mapper.PtsMapper">
+
+    <insert id="insertPts">
+        INSERT INTO
+            pts (
+                pts_id,
+                pay_no,
+                pay_account,
+                get_account,
+                pay_money,
+                `desc`,
+                add_time,
+                pay_time,
+                pay_type,
+                pay_status,
+                reason
+
+            )
+        VALUES (
+            #{pts.ptsId},
+            #{pts.payNo},
+            #{pts.payAccount},
+            #{pts.getAccount},
+            #{pts.payMoney},
+            #{pts.desc},
+            #{pts.addTime},
+            #{pts.payTime},
+            #{pts.payType},
+            #{pts.payStatus},
+            #{pts.reason}
+        )
+    </insert>
+
     <select id="selectPtsByOrderNumber" resultType="spiritray.common.pojo.PO.Pts">
         SELECT *
         FROM

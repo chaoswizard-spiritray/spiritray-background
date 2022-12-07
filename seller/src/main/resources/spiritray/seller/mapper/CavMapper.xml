@@ -26,6 +26,15 @@
         </foreach>
     </insert>
 
+    <insert id="insertAttributes" useGeneratedKeys="true" keyProperty="attributes.attributeId">
+        INSERT INTO
+        attribute(attribute.category_id,attribute.attribute_name,attribute.is_mul)
+        VALUES
+        <foreach collection="attributes" separator="," item="attribute">
+            (#{categoryId},#{attribute.attributeName},#{attribute.isMul})
+        </foreach>
+    </insert>
+
     <select id="selectCategoryById" resultType="spiritray.common.pojo.PO.Category">
         SELECT
             category_id,
@@ -39,15 +48,17 @@
         SELECT
             attribute_id,
             attribute_name,
-            is_mul
+            is_mul,
+            is_key
         FROM attribute
         WHERE category_id = #{categoryId}
+        ORDER BY is_mul DESC, is_key DESC
     </select>
 
     <select id="selectCavByCommodityId" resultType="spiritray.common.pojo.DTO.SSMap">
         SELECT
             attribute.attribute_name AS attributeName,
-            cav.attribute_value AS attributeValue
+            cav.attribute_value      AS attributeValue
         FROM
             cav
             JOIN attribute

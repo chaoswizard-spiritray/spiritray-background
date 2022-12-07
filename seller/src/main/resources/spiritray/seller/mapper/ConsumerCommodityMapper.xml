@@ -2,58 +2,99 @@
 <!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="spiritray.seller.mapper.ConsumerCommodityMapper">
 
+    <sql id="favorableRateAndMinAndMaxPrice">
+        SELECT
+            g.commodity_id,
+            g.favorable_rate,
+            h.price_min,
+            h.price_max
+        FROM
+            (
+                SELECT
+                    a.commodity_id,
+                    b.good_comment / a.all_comment AS favorable_rate
+                FROM
+                    (
+                        SELECT
+                            commodity.commodity_id,
+                            COUNT(*) AS all_comment
+                        FROM
+                            commodity
+                            LEFT JOIN `comment`
+                                ON
+                                    commodity.commodity_id = `comment`.commodity_id
+                        GROUP BY commodity.commodity_id
+                    ) a
+                    JOIN
+                    (
+                        SELECT
+                            commodity.commodity_id,
+                            COUNT(*) AS good_comment
+                        FROM
+                            commodity
+                            LEFT JOIN `comment`
+                                ON
+                                    commodity.commodity_id = `comment`.commodity_id
+                        WHERE
+                            `comment`.star_level > 3
+                            OR
+                            `comment`.comment_no IS NULL
+                        GROUP BY commodity.commodity_id
+                    ) b
+                        ON
+                            a.commodity_id = b.commodity_id
+            ) g
+            JOIN
+            (
+                SELECT
+                    e.commodity_id,
+                    e.price_min,
+                    f.price_max
+                FROM
+                    (
+                        SELECT
+                            c.commodity_id,
+                            c.sku_price AS price_min
+                        FROM
+                            (
+                                SELECT
+                                    commodity_id,
+                                    sku_price
+                                FROM
+                                    sku
+                                ORDER BY commodity_id, sku.sku_price
+                            ) c
+                        GROUP BY c.commodity_id
+                    ) e
+                    JOIN
+                    (
+                        SELECT
+                            d.commodity_id,
+                            d.sku_price AS price_max
+                        FROM
+                            (
+                                SELECT
+                                    commodity_id,
+                                    sku_price
+                                FROM
+                                    sku
+                                ORDER BY commodity_id, sku.sku_price DESC
+                            ) d
+                        GROUP BY d.commodity_id
+                    ) f
+                        ON e.commodity_id = f.commodity_id
+            ) h
+                ON g.commodity_id = h.commodity_id
+    </sql>
+
     <select id="selectHomeCommoditySimpleOrderByfavorableRate"
             resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
-        SELECT
-            resu.*,
-            MIN(sku.sku_price) AS price_min,
-            MAX(sku.sku_price) AS price_max
+        SELECT i.*, commodity.master_map, commodity.commodity_name
         FROM
-            (SELECT
-                 commodity.commodity_id,
-                 commodity.commodity_name,
-                 commodity.master_map,
-                 good_rate.favorable_rate
-             FROM
-                 (SELECT
-                      good.commodity_id,
-                      good.cm_num / total.cm_num AS favorable_rate
-                  FROM
-                      (
-                              (SELECT
-                                   cd.commodity_id,
-                                   COUNT(*) AS cm_num
-                               FROM
-                                   commodity AS cd LEFT JOIN `comment` AS cm
-                                       ON
-                                           cd.commodity_id = cm.commodity_id
-                               WHERE
-                                   star_level IS NULL OR star_level > 3
-                               GROUP BY cd.commodity_id
-                              ) good
-                              JOIN
-                              (SELECT
-                                   cd.commodity_id,
-                                   COUNT(*) AS cm_num
-                               FROM
-                                   commodity AS cd LEFT JOIN `comment` AS cm
-                                       ON
-                                           cd.commodity_id = cm.commodity_id
-                               GROUP BY cd.commodity_id
-                              ) total
-                                  ON good.commodity_id = total.commodity_id
-                      )
-                 ) good_rate
-                 JOIN commodity
-                 JOIN sku
-                     ON
-                         good_rate.commodity_id = commodity.commodity_id
-             ORDER BY good_rate.favorable_rate
-             LIMIT #{pageNum}, #{recordNum}) AS resu
-            JOIN sku
-                ON resu.commodity_id = sku.commodity_id
-        GROUP BY resu.commodity_id
-
+        commodity JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id= i.commodity_id
+        ORDER BY i.favorable_rate DESC
+        LIMIT #{pageNum},#{recordNum}
     </select>
 
     <select id="selectHomeCommoditySimpleOrderByfavorableRateByCommodityIds"
@@ -127,7 +168,7 @@
         ON
         good_rate.commodity_id = commodity.commodity_id
         ORDER BY good_rate.favorable_rate
-        LIMIT 0, 20) AS resu
+        LIMIT #{pageNum}, #{recordNum}) AS resu
         JOIN sku
         ON resu.commodity_id = sku.commodity_id
         GROUP BY resu.commodity_id;
@@ -149,4 +190,36 @@
         WHERE
             co.commodity_id = #{commodityId}
     </select>
+
+    <select id="selectHomeCommoditySimpleOrderByfavorableRateByTypes"
+            resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+        SELECT i.*, commodity.master_map, commodity.commodity_name
+        FROM
+        commodity JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id= i.commodity_id
+        WHERE
+        commodity.category_id IN
+        <foreach collection="types" item="type" open="(" close=")" separator=",">
+            #{type}
+        </foreach>
+        AND
+        commodity.status_code=1
+        ORDER BY i.favorable_rate DESC
+        LIMIT #{pageNum},#{recordNum}
+    </select>
+    <select id="selectTokenCol" resultType="java.lang.String">
+        (SELECT category_name
+         FROM category)
+        UNION
+        (SELECT cav.attribute_value
+         FROM cav
+             LEFT JOIN attribute ON cav.attribute_id = attribute.attribute_id
+         WHERE attribute.attribute_name = '品牌')
+    </select>
+
+    <select id="selectHomeCommoditySimpleOrderByTokenWord"
+            resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+
+    </select>
+    <select id="selectCategoryIdByToken" resultType="java.lang.Integer"></select>
 </mapper>

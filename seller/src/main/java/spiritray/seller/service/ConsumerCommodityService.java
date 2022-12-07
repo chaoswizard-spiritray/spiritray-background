@@ -16,4 +16,7 @@ public interface ConsumerCommodityService {
 
     /*查询客户端商品详情*/
     public RpsMsg queryConsumerCommodityDetail(String commodityId);
+
+    /*查询买家搜索商品信息*/
+    public RpsMsg queryConsumerCommoditySearch(String word);
 }

@@ -7,17 +7,18 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SSMap;
-import spiritray.common.pojo.PO.Cpi;
-import spiritray.common.pojo.PO.OrderDetail;
-import spiritray.common.pojo.PO.Pbi;
-import spiritray.order.mapper.CpiMapper;
-import spiritray.order.mapper.OrderDetailMapper;
-import spiritray.order.mapper.PbiMapper;
+import spiritray.common.pojo.PO.*;
+import spiritray.common.tool.SystemMsgNotice;
+import spiritray.order.mapper.*;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * ClassName:PayCallbackController
@@ -41,11 +42,29 @@ public class PayCallbackController {
     private PbiMapper pbiMapper;
 
     @Autowired
+    private PtsMapper ptsMapper;
+
+    @Autowired
+    private OrderMapper orderMapper;
+
+    @Autowired
     @Qualifier("backFail")
     private List backFail;
 
     @Autowired
+    @Qualifier("transferFail")
+    private List transferFail;
+
+    @Autowired
+    @Qualifier("threadPool")
+    private ThreadPoolExecutor threadPoolExecutor;
+
+    @Autowired
     private RedisTemplate redisTemplate;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
 
     private final String Order_KEY_PREFIX = "order";//redis订单细节编号为key的前缀
 
@@ -54,7 +73,8 @@ public class PayCallbackController {
     @PostMapping("/app")
     public RpsMsg payAppCallBack(String cpi, int code) {
         if (code == 1) {
-            new Thread(new Runnable() {
+            //支付成功创建通知任务，交由线程池处理
+            threadPoolExecutor.execute(new Thread(new Runnable() {
                 @Override
                 public void run() {
                     Cpi cpi1 = JSON.parseObject(cpi, Cpi.class);
@@ -83,7 +103,7 @@ public class PayCallbackController {
                         cpiMapper.insertCpi(cpi1);
                     }
                 }
-            }).start();
+            }));
         }
         //返回数据
         return new RpsMsg().setStausCode(200).setData("SUCCESS");
@@ -93,13 +113,15 @@ public class PayCallbackController {
     @PostMapping("/back")
     public RpsMsg backCallback(String pbi, int code) {
         //保存信息
-        new Thread(new Runnable() {
+        threadPoolExecutor.execute(new Thread(new Runnable() {
             @Override
             public void run() {
                 Pbi pbi1 = JSON.parseObject(pbi, Pbi.class);
-                //如果退款成功先将退款信息保存起来
                 if (code == 1) {
                     pbiMapper.insertPbi(pbi1);
+                    //如果退款成功先将退款信息保存起来，并通知买家
+                    Msg msg = new Msg("", 0L, orderMapper.selectOrderPhoneByOrderNumber(pbi1.getPbiId().substring(0, 36)), 0, 1, "你的订单" + pbi1.getPbiId() + "于" + pbi1.getBackDate() + "已退款到" + (pbi1.getAccaId() == 1 ? "支付宝" : "微信") + pbi1.getBackMoney() + "元", "text", 0, new Timestamp(new Date().getTime()), 0);
+                    SystemMsgNotice.notieMsg(restTemplate, msg);
                 } else if (code == -1) {
                     //如果退款失败
                     //将任务保存到定时轮询退款任务中,会重新执行退款任务
@@ -108,7 +130,29 @@ public class PayCallbackController {
                     backFail.add(ssMap);
                 }
             }
-        }).start();
+        }));
+        return new RpsMsg().setStausCode(200).setData("SUCCESS");
+    }
+
+    /*转账回调接口*/
+    @PostMapping("/trans")
+    public RpsMsg transferCallBack(String param, int code) {
+        //保存转账信息
+        threadPoolExecutor.execute(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Pts pts = JSON.parseObject(param, Pts.class);
+                if (code == 1) {
+                    ptsMapper.insertPts(pts);
+                    Msg msg = new Msg("", 0L, orderMapper.selectOrderPhoneByOrderNumber(pts.getPtsId().substring(0, 36)), 0, 2, "你的订单" + pts.getPtsId() + "于" + pts.getPayTime() + "已转账到你" + pts.getPayType()+"下的"+pts.getGetAccount()+"账户。共计"+ pts.getPayMoney() + "元", "text", 0, new Timestamp(new Date().getTime()), 0);
+                    SystemMsgNotice.notieMsg(restTemplate, msg);
+                } else if (code == -1) {
+                    SSMap ssMap = new SSMap();
+                    ssMap.setAttributeValue(pts.getPtsId().substring(0, 36)).setAttributeName(pts.getPtsId().substring(36, pts.getPtsId().length()));
+                    transferFail.add(ssMap);
+                }
+            }
+        }));
         return new RpsMsg().setStausCode(200).setData("SUCCESS");
     }
 

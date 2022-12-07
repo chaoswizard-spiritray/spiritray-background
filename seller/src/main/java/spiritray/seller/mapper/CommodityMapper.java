@@ -17,6 +17,9 @@ import java.util.List;
  */
 @Repository
 public interface CommodityMapper {
+    /*查询商品的种类Id*/
+    public List<Integer> selectCommodityCateIdByCommoditys(@Param("commodityIds") List<String> commodityIds);
+
     /*查询所有商品id*/
     public List<String> selectAllCommodityId();
 

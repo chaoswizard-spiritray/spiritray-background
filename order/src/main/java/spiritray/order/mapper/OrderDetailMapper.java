@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import spiritray.common.pojo.DTO.OrderDetailInfo;
 import spiritray.common.pojo.PO.OrderDetail;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -21,8 +22,12 @@ import java.util.Map;
 @Mapper
 @Repository
 public interface OrderDetailMapper {
+    /*查询指定用户所有订单的商品id*/
+    public List<String> selectAllOrderCommodityIdByPhone(@Param("phone") long phone);
+
     /*获取指定订单的详细信息*/
     public OrderDetailInfo selectOrderDetailInfo(@Param("orderNumber") String orderNumber, @Param("odId") int odId);
+
     /*修改订单细节编号*/
     public int updateOrderDetailLogisticsNo(@Param("orderNumber") String orderNumber, @Param("odId") int odId, @Param("storeId") String storeId, @Param("logisticsNo") String logisticsNo);
 
@@ -70,6 +75,9 @@ public interface OrderDetailMapper {
 
     /*修改指定订单细节记录状态*/
     public int updateDetailStateById(@Param("orderNumber") String orderNumber, @Param("odId") int odId, @Param("state") int state);
+
+    /*修改指定订单状态和结束日期*/
+    public int updateDetailStateAndOverDateById(@Param("orderNumber") String orderNumber, @Param("odId") int odId, @Param("overdate") Timestamp overdate);
 
     /*修改指定指定订单细节记录信息*/
     public int updateDetailAddress(@Param("address") String address, @Param("phone") Long phone, @Param("orderNumber") String orderNumber, @Param("odId") int odId);

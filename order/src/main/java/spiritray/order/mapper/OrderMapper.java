@@ -24,4 +24,7 @@ public interface OrderMapper {
 
     /*清除无订单细节的订单*/
     public int updateOrderNoDetail();
+
+    /*查询指定订单的电话*/
+    public Long selectOrderPhoneByOrderNumber(@Param("orderId") String orderId);
 }

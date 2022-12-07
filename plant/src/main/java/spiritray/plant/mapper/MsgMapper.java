@@ -20,7 +20,7 @@ import java.util.List;
 @Repository
 public interface MsgMapper {
     /*查询消息首页展示的数据MsgHomeInfo*/
-    public List<MsgHomeInfo> selectMsgHomeInfoByReceiver(@Param("receiver") Long receiver, @Param("senderRole") Integer senderRole, @Param("recevicerRole") Integer recevicerRole);
+    public List<MsgHomeInfo> selectMsgHomeInfoByReceiver(@Param("receiver") Long receiver, @Param("role") Integer role);
 
     /*删除指定发送者的所有消息*/
     public int updateAllDeleteBySenderIdAndReceiver(@Param("receiver") Long receiver, @Param("sender") Long sender);
@@ -35,5 +35,5 @@ public interface MsgMapper {
     public int insertMsgSimple(@Param("msg") Msg msg);
 
     /*修改指定消息为已读*/
-    public int updateMsgReaded(@Param("receiver") Long receiver, @Param("msgId") String msgId);
+    public int updateMsgReaded( @Param("msgId") String msgId);
 }

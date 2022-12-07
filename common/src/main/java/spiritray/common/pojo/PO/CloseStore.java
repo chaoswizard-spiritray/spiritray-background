@@ -8,22 +8,25 @@ import lombok.experimental.Accessors;
 import java.sql.Timestamp;
 
 /**
- * ClassName:History
+ * ClassName:CloseStore
  * Package:spiritray.common.pojo.PO
  * Description:
  *
- * @Date:2022/6/19 20:46
+ * @Date:2022/12/1 22:31
  * @Author:灵@email
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Accessors(chain = true)
-public class History {
-    private String hisId;
-    private long consumerPhone;
-    private String commodityId;
-    private Timestamp startDate;
-    private int lookTime;
-    private int isDelete;
+public class CloseStore {
+    private String infoId;
+    private String storeId;
+    private Timestamp applyDate;
+    private String applyCause;
+    private Long closeDay;
+    private Integer checkCode;
+    private Long checkStaff;
+    private Timestamp paseDate;
+    private Integer isDelete;
 }

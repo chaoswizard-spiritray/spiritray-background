@@ -14,6 +14,7 @@ import java.util.Map;
  * ClassName:SessionKeepInterceptor
  * Package:spiritray.common.interceptor
  * Description:
+ * 因为服务器有多个，会话不能保持，会话中的数据不能共享，保证会话中的数据不丢失。
  *
  * @Date:2022/6/16 19:21
  * @Author:灵@email
@@ -21,6 +22,10 @@ import java.util.Map;
 public class SessionKeepInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        //我们还是需要将这个类型请求放行
+        if (request.getMethod().equals("OPTION")) {
+            return true;
+        }
         String jwt = request.getHeader("jwt");
         String storeId = request.getHeader("storeId");
         String staffId = request.getHeader("staffId");

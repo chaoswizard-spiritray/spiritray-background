@@ -19,4 +19,7 @@ public interface PbiMapper {
 
     /*插入退款信息*/
     public int insertPbi(@Param("pbi") Pbi pbi);
+
+    /*获取退款订单的电话*/
+    public Long selectPbiPhone(@Param("pbiId")String pbiId);
 }

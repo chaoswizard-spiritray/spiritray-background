@@ -19,6 +19,12 @@ import java.util.List;
 @Mapper
 @Repository
 public interface ConsumerCommodityMapper {
+    /*查询分词字段*/
+    public List<String> selectTokenCol();
+
+    /*查询指定种类范围内的首页数据*/
+    public List<HomeCommoditySimple> selectHomeCommoditySimpleOrderByfavorableRateByTypes(@Param("types") List<Integer> types, @Param("pageNum") int pageNum, @Param("recordNum") int recordNum);
+
     /*统计商品好评率并按照好评率排序*/
     public List<HomeCommoditySimple> selectHomeCommoditySimpleOrderByfavorableRate(@Param("pageNum") int pageNum, @Param("recordNum") int recordNum);
 
@@ -27,4 +33,8 @@ public interface ConsumerCommodityMapper {
 
     /*查询客户端商品详细信息通过id*/
     public CommodityShop selectCommodityShopByCommodityId(@Param("commodityId") String commodityIds);
+
+    /*根据分词查找信息*/
+    public List<HomeCommoditySimple> selectHomeCommoditySimpleOrderByTokenWord(@Param("word") String word);
+
 }

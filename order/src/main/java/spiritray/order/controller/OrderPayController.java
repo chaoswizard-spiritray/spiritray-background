@@ -19,14 +19,17 @@ import spiritray.common.pojo.BO.BackPayParam;
 import spiritray.common.pojo.BO.WechatAppPayParam;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SSMap;
-import spiritray.common.pojo.PO.Cpi;
-import spiritray.common.pojo.PO.PlantAccount;
+import spiritray.common.pojo.PO.*;
+import spiritray.common.tool.SystemMsgNotice;
 import spiritray.order.mapper.CpiMapper;
 import spiritray.order.mapper.OrderDetailMapper;
 import spiritray.order.mapper.OrderMapper;
 
+import javax.servlet.http.HttpSession;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.Timestamp;
+import java.util.Date;
 
 /**
  * ClassName:OrderPayController
@@ -53,6 +56,8 @@ public class OrderPayController {
     private CpiMapper cpiMapper;
 
     private final String PLANT_URL = "http://localhost:8083";
+
+    private final String SELLER_URL = "http://localhost:8081";
 
     private final String ORDER_URL = "http://localhost:8082";
 
@@ -90,6 +95,10 @@ public class OrderPayController {
             //获取平台收款账号信息
             PlantAccount account = getPlantAccount(payCate);
             if (account == null) {
+                //通知平台账户问题
+                Msg msg = new Msg("", 0L, 0L, 0, 0, "系统存在开启了支付方式却没有提供收款账户问题,导致买家支付失败,请立即处理", "text", 0, new Timestamp(new Date().getTime()), 0);
+                SystemMsgNotice.notieMsg(restTemplate, msg);
+                //返回买家端消息
                 return new RpsMsg().setStausCode(300).setMsg("系统繁忙");
             }
             //拉取支付数据并返回到前端
@@ -129,6 +138,9 @@ public class OrderPayController {
             //获取平台收款账号信息
             PlantAccount account = getPlantAccount(payCate);
             if (account == null) {
+                //通知平台账户问题
+                Msg msg = new Msg("", 0L, 0L, 0, 0, "系统存在开启了支付方式却没有提供收款账户问题,导致买家支付失败,请立即处理", "text", 0, new Timestamp(new Date().getTime()), 0);
+                SystemMsgNotice.notieMsg(restTemplate, msg);
                 return new RpsMsg().setStausCode(300).setMsg("系统繁忙");
             }
             //拉取支付数据并返回到前端
@@ -145,7 +157,7 @@ public class OrderPayController {
 
     /*未发货订单细节取消退款*/
     @PostMapping("/detail/back")
-    public RpsMsg postBackOrderDetailMoney(String orderNumber, int odId) {
+    public RpsMsg postBackOrderDetailMoney(String orderNumber, int odId, HttpSession session) {
         //先获取订单细节付款信息
         Cpi cpi = cpiMapper.selectCpiByCpiId(orderNumber + odId);
         //判断付款方式获取支付商户号密钥
@@ -157,6 +169,8 @@ public class OrderPayController {
         RpsMsg rpsMsg = resEntity.getBody();
         if ((!resEntity.getStatusCode().is2xxSuccessful()) || (rpsMsg.getData() == null)) {
             //如果是数据为空表明系统无可用正常的商户我们需要消息通知平台员工该订单退款商户存在问题
+            Msg msg = new Msg("", 0L, 0L, 0, 0, "平台禁用了" + (cpi.getAccaId() == 1 ? "支付宝" : "微信") + "含有未完成订单的商户号:" + cpi.getPlantAccount(), "text", 0, new Timestamp(new Date().getTime()), 0);
+            SystemMsgNotice.notieMsg(restTemplate, msg);
             return new RpsMsg().setStausCode(300).setMsg("系统繁忙，稍后再试");
         }
         //如果获取到商户信息，创建退款请求参数
@@ -189,6 +203,85 @@ public class OrderPayController {
         }
     }
 
+    /*已收货订单平台转账给商户*/
+    @PostMapping("/detail/trans")
+    public RpsMsg postTransOrderDetailMoney(String orderNumber, int odId) {
+        //获取店铺id
+        String storeId = orderDetailMapper.selectOrderDetailById(orderNumber, odId).getStoreId();
+        //获取店铺电话
+        Long phone = (Long) restTemplate.exchange(SELLER_URL + "/store/storeInf/phone/" + storeId, HttpMethod.GET, new HttpEntity<>(new LinkedMultiValueMap<>(), new HttpHeaders()), RpsMsg.class).getBody().getData();
+        //先获取商家收款账户
+        SellerAccount sellerAliAccount = getSellerCollectionAccount(1, storeId);
+        SellerAccount sellerWchAccount = getSellerCollectionAccount(2, storeId);
+        //获取平台可用转账账户
+        PlantAccount plantAliAccount = getPlantAccount(1);
+        PlantAccount plantWchAccount = getPlantAccount(2);
+        PlantAccount transAccount = plantAliAccount;
+        //确定商家收款账户
+        SellerAccount collectionAccount = sellerAliAccount == null ? (sellerWchAccount == null ? null : sellerWchAccount) : sellerAliAccount;
+        if (collectionAccount == null) {
+            //通知商家添加账户
+            Msg msg = new Msg("", 0L, phone, 0, 2, "订单:" + orderNumber + odId + "结束，平台转账失败，因为你没有可用收款账户，请及时添加并开启", "text", 0, new Timestamp(new Date().getTime()), 0);
+            SystemMsgNotice.notieMsg(restTemplate, msg);
+            return new RpsMsg().setStausCode(300).setMsg("系统繁忙");
+        } else {
+            if (plantAliAccount == null && plantWchAccount == null) {
+                //通知系统添加账户
+                Msg msg = new Msg("", 0L, 0L, 0, 0, "订单:" + orderNumber + odId + "结束，平台转账失败，因为平台没有可用转账账户，请及时添加并开启", "text", 0, new Timestamp(new Date().getTime()), 0);
+                SystemMsgNotice.notieMsg(restTemplate, msg);
+                return new RpsMsg().setStausCode(300).setMsg("系统繁忙");
+            }
+            if (collectionAccount == sellerAliAccount) {
+                if (plantAliAccount == null && sellerWchAccount == null) {
+                    //如果平台账户与商家账户错开
+                    Msg msg = new Msg("", 0L, 0L, 0, 0, "订单:" + orderNumber + odId + "结束，平台转账失败，因为平台没有对应的类型可用转账账户，请及时添加并开启", "text", 0, new Timestamp(new Date().getTime()), 0);
+                    SystemMsgNotice.notieMsg(restTemplate, msg);
+                } else if (plantAliAccount == null && sellerWchAccount != null) {
+                    //那么就使用微信账户
+                    collectionAccount = sellerWchAccount;
+                    transAccount = plantWchAccount;
+                } else if (plantAliAccount != null) {
+                    transAccount = plantAliAccount;
+                }
+            }
+            if (collectionAccount == sellerWchAccount) {
+                if (plantWchAccount == null && sellerAliAccount == null) {
+                    collectionAccount.getAccaId();//无效行
+                    //如果平台账户与商家账户错开
+                    Msg msg = new Msg("", 0L, 0L, 0, 0, "订单:" + orderNumber + odId + "结束，平台转账失败，因为平台没有对应的类型可用转账账户，请及时添加并开启", "text", 0, new Timestamp(new Date().getTime()), 0);
+                    SystemMsgNotice.notieMsg(restTemplate, msg);
+                } else if (plantWchAccount == null && sellerAliAccount != null) {
+                    //那么就使用微信账户
+                    collectionAccount = sellerAliAccount;
+                    transAccount = plantAliAccount;
+                } else if (plantWchAccount != null) {
+                    transAccount = plantWchAccount;
+                }
+            }
+        }
+        //确定好转账账户后封装转账信息
+        Pts pts = new Pts().setPtsId(orderNumber + odId).setPayAccount(transAccount.getAccountNo()).setGetAccount(collectionAccount.getAccountNo()).setDesc("订单" + orderNumber + odId + "结束平台转账");
+        if (collectionAccount == sellerAliAccount) {
+            pts.setPayType("支付宝");
+        } else {
+            pts.setPayType("微信");
+        }
+        //设置转账金额
+        pts.setPayMoney(orderDetailMapper.selectOrderDetailById(orderNumber, odId).getTotalAmount());
+        String notifyUrl = ORDER_URL + "/pay/callback/trans";
+        //进行转账
+        MultiValueMap multiValueMap = new LinkedMultiValueMap();
+        multiValueMap.add("param", JSON.toJSONString(pts));
+        multiValueMap.add("notifyUrl", notifyUrl);
+        ResponseEntity<RpsMsg> responseEntity = restTemplate.exchange(ORDER_URL + "/pay/transfer", HttpMethod.PUT, new HttpEntity<>(multiValueMap, new HttpHeaders()), RpsMsg.class);
+        //如果访问出错
+        if (!responseEntity.getStatusCode().is2xxSuccessful()) {
+            return new RpsMsg().setStausCode(300).setMsg("系统繁忙，稍后再试");
+        } else {
+            return responseEntity.getBody();
+        }
+    }
+
     /*请求平台收款账户*/
     private PlantAccount getPlantAccount(int cate) {
         //创建请求实体对象
@@ -199,6 +292,20 @@ public class OrderPayController {
         if (rpsMsg != null && rpsMsg.getStausCode() == 200 && rpsMsg.getData() != null) {
             //因为resttemplate返回的是一个map,通过json中间转换为我们需要的类型
             return JSONUtil.toBean(JSONUtil.parseObj(rpsMsg.getData()), PlantAccount.class);
+        } else {
+            return null;
+        }
+    }
+
+    /*请求商家收款账户*/
+    private SellerAccount getSellerCollectionAccount(int cate, String storeId) {
+        //创建请求实体对象
+        HttpHeaders httpHeaders = new HttpHeaders();
+        HttpEntity httpEntity = new HttpEntity(httpHeaders);
+        RpsMsg rpsMsg = restTemplate.exchange(SELLER_URL + "/store/account/receive/" + storeId+"/"+cate, HttpMethod.GET, httpEntity, RpsMsg.class).getBody();
+        if (rpsMsg != null && rpsMsg.getStausCode() == 200 && rpsMsg.getData() != null) {
+            //因为resttemplate返回的是一个map,通过json中间转换为我们需要的类型
+            return JSONUtil.toBean(JSONUtil.parseObj(rpsMsg.getData()), SellerAccount.class);
         } else {
             return null;
         }

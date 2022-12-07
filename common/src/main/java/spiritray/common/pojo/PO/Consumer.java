@@ -22,7 +22,7 @@ public class Consumer {
     private String consumerHead;//头像
     private String consumerNickname;//昵称
     private long consumerPhone;//电话
-    private String consumer_email;//邮箱
+    private String consumerEmail;//邮箱
     private byte consumerSex;//性别
     private String consumerPassword;//密码
     private byte isEnter=0;//是否入驻为商家,0为未入驻，1为已入驻,该字段并不在数据库中存在

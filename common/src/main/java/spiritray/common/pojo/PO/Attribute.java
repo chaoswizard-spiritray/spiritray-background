@@ -21,4 +21,5 @@ public class Attribute {
     private long attributeId;
     private String attributeName;
     private int isMul;
+    private int isKey;
 }

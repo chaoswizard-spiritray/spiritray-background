@@ -29,4 +29,18 @@
                 #{pbi.startDate}
             )
     </insert>
+
+    <select id="selectPbiPhone" resultType="java.lang.Long">
+        SELECT `order`.consumer_phone
+        FROM
+            `order`
+            JOIN order_detail
+            JOIN pbi
+                ON
+                    `order`.order_number = order_detail.order_number
+                    AND
+                    CONCAT(order_detail.order_number, order_detail.od_id) = pbi.pbi_id
+        WHERE
+            pbi.pbi_id = #{pbiId}
+    </select>
 </mapper>

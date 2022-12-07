@@ -1,5 +1,6 @@
 package spiritray.seller.controller;
 
+import cn.hutool.extra.tokenizer.TokenizerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,6 +28,7 @@ public class ConsumerCommodityController {
     /*查询首页商品信息*/
     @GetMapping("/home/{pageNum}/{recordNum}")
     public RpsMsg getHomeCommidty(@PathVariable int pageNum, @PathVariable int recordNum, HttpSession session) {
+        //已经登录、和未登录是两种状况
         Object l = session.getAttribute("phone");
         if (l != null) {
             return consumerCommodityService.queryHomeCommodity(pageNum, recordNum, (Long) l);
@@ -41,5 +43,11 @@ public class ConsumerCommodityController {
         return consumerCommodityService.queryConsumerCommodityDetail(commodityId);
     }
 
+    /*查询搜索商品*/
+    @GetMapping("/search/{word}")
+    public RpsMsg getComsumerCommoditySearch(@PathVariable String word) {
+        consumerCommodityService.queryConsumerCommoditySearch(word);
+        return null;
+    }
 
 }

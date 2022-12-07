@@ -51,7 +51,7 @@
             AND
             order_detail.od_id = #{odId}
             AND
-            is_delete=0
+            is_delete = 0
     </update>
 
     <update id="updateDetailDeleteById">
@@ -119,6 +119,15 @@
             store_id = #{storeId}
             AND
             state = 1
+    </update>
+
+    <update id="updateDetailStateAndOverDateById">
+        UPDATE order_detail
+        SET state = 3, over_date = #{overdate}
+        WHERE
+            order_number = #{orderNumber}
+            AND
+            od_id = #{odId}
     </update>
 
     <select id="selectDetailStateById" resultType="java.lang.Integer">
@@ -310,6 +319,17 @@
             order_detail.order_number = #{orderNumber}
             AND
             order_detail.od_id = #{odId}
+    </select>
+
+    <select id="selectAllOrderCommodityIdByPhone" resultType="java.lang.String">
+        SELECT order_detail.commodity_id
+        FROM
+            `order`
+            JOIN order_detail
+                ON
+                    `order`.order_number = order_detail.order_number
+        WHERE
+            `order`.consumer_phone = #{phone}
     </select>
 
 </mapper>

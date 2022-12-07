@@ -4,9 +4,9 @@
     <insert id="insertHisOne">
         INSERT INTO
             look_his
-            (look_his.commodity_id, look_his.consumer_phone, look_his.start_date, look_his.look_time)
+            (look_his.his_id, look_his.commodity_id, look_his.consumer_phone, look_his.start_date, look_his.look_time)
         VALUES
-            (#{lookHis.commodityId}, #{lookHis.consumerPhone}, NOW(), #{lookHis.lookTime})
+            (#{lookHis.hisId}, #{lookHis.commodityId}, #{lookHis.consumerPhone}, NOW(), #{lookHis.lookTime})
     </insert>
 
     <update id="updateHisByPhoneAndCommodityId">
@@ -17,29 +17,34 @@
             commodity_id = #{his.commodityId}
             AND
             consumer_phone = #{his.consumerPhone}
+            AND
+            is_delete = 0
     </update>
 
-    <delete id="deleteHisByPhoneAndCommodityId">
-        DELETE
-        FROM
-            look_his
+    <update id="updateIsDeleteHisByPhoneAndCommodityId">
+        UPDATE look_his
+        SET is_delete = 1
         WHERE
             commodity_id = #{commodityId}
             AND
             consumer_phone = #{phone}
-    </delete>
+            AND
+            is_delete = 0
+    </update>
 
-    <select id="selectLookRecentlyLong" resultType="java.lang.String">
+    <select id="selectLookRecentlyLongCommodityIdAndNoDelete" resultType="java.lang.String">
         SELECT commodity_id
         FROM
             look_his
         WHERE
             consumer_phone = #{phone}
+            AND
+            is_delete = 0
         ORDER BY look_his.start_date, look_his.look_time
         LIMIT 0, #{num}
     </select>
 
-    <select id="selectHisByPhoneAndCommodityId" resultType="spiritray.common.pojo.PO.History">
+    <select id="selectNoDeleteHisByPhoneAndCommodityId" resultType="spiritray.common.pojo.PO.History">
         SELECT *
         FROM
             look_his
@@ -47,5 +52,37 @@
             commodity_id = #{commodityId}
             AND
             consumer_phone = #{phone}
+            AND
+            is_delete = 0
+    </select>
+
+    <select id="selectCountDateByRecentDay" resultType="java.util.Map">
+        SELECT
+            look_his.start_date AS date,
+            COUNT(*)            AS num
+        FROM
+            look_his
+        WHERE
+            consumer_phone = #{phone}
+            AND
+            is_delete = #{isDelete}
+        GROUP BY start_date
+        LIMIT 0, #{recentDay}
+    </select>
+
+    <select id="selectCommodityByDateAndNumMany" resultType="java.lang.String">
+        <if test="params!=null and params.size()>0">
+            <foreach collection="params.entrySet()" index="key" item="val" separator="UNION">
+                (SELECT commodity_id
+                FROM
+                look_his
+                WHERE
+                consumer_phone=#{phone}
+                AND
+                start_date=#{key}
+                ORDER BY look_time DESC
+                LIMIT 0,#{val})
+            </foreach>
+        </if>
     </select>
 </mapper>

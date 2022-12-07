@@ -29,7 +29,8 @@
             consumer.consumer_nickname,
             consumer.consumer_phone,
             consumer.consumer_sex,
-            consumer.consumer_password
+            consumer.consumer_password,
+            consumer.consumer_email
         )
         VALUES
             (
@@ -37,7 +38,8 @@
                 #{consumer.consumerNickname},
                 #{consumer.consumerPhone},
                 #{consumer.consumerSex},
-                #{consumer.consumerPassword}
+                #{consumer.consumerPassword},
+                #{consumer.consumerEmail}
             );
     </insert>
 
@@ -59,6 +61,10 @@
             </if>
             <if test="consumer.consumerNickname!=null">
                 consumer_nickname=#{consumer.consumerNickname},
+
+            </if>
+            <if test="consumer.consumerEmail!=null">
+                consumer_email=#{consumer.consumerEmail},
 
             </if>
             <if test="consumer.consumerPassword!=null">
@@ -150,6 +156,12 @@
                 </foreach>
             </where>
         </if>
+    </select>
+
+    <select id="selectEmailByPhone" resultType="java.lang.String">
+        SELECT consumer_email
+        FROM consumer
+        WHERE consumer_phone = #{phone}
     </select>
 
 

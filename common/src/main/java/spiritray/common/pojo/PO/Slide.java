@@ -8,22 +8,20 @@ import lombok.experimental.Accessors;
 import java.sql.Timestamp;
 
 /**
- * ClassName:History
+ * ClassName:Slide
  * Package:spiritray.common.pojo.PO
  * Description:
  *
- * @Date:2022/6/19 20:46
+ * @Date:2022/12/2 14:35
  * @Author:灵@email
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Accessors(chain = true)
-public class History {
-    private String hisId;
-    private long consumerPhone;
-    private String commodityId;
-    private Timestamp startDate;
-    private int lookTime;
+public class Slide {
+    private String slideNo;
+    private String storeId;
+    private Timestamp getDate;
     private int isDelete;
 }

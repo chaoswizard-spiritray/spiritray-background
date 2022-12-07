@@ -180,7 +180,7 @@
         SELECT
             account_id,
             acca_id,
-            account_num,
+            account_no,
             is_collections
         FROM
             account_seller
