@@ -3,10 +3,12 @@ package spiritray.seller.mapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
+import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.SellerAccount;
 import spiritray.common.pojo.PO.Store;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * ClassName:StoreMapper
@@ -19,6 +21,13 @@ import java.util.List;
 @Mapper
 @Repository
 public interface StoreMapper {
+
+    /*通过分词查询店铺名*/
+    public List<SSMap> selectStoreByRegexp(@Param("regexp") String regexp);
+
+    /*查询指定id范围内的店铺*/
+    public List<Store> selectTokenStoreByIds(@Param("ids") Set<String> ids);
+
     /*通过电话查询店铺信息*/
     public Store selectStoreByPhone(@Param("phone") long phone);
 

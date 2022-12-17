@@ -1,11 +1,14 @@
 package spiritray.order.controller;
 
+import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import spiritray.common.pojo.DTO.OrderBeforeCommodity;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SNMap;
@@ -34,13 +37,22 @@ import java.util.stream.Collectors;
 public class OrderController {
 
     @Autowired
+    private HttpHeaders headers;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
     private OrderService orderService;
 
     @Autowired
     private OrderDetailMapper orderDetailMapper;
 
-    @Autowired
-    private RedisTemplate redisTemplate;
+
+    private final String SELLER_URL = "http://localhost:8081";
 
     private final String Order_KEY_PREFIX = "order";//redis订单细节编号为key的前缀
 
@@ -64,8 +76,20 @@ public class OrderController {
 
     /*获取订单令牌*/
     @GetMapping("/token")
-    public RpsMsg getOrderBeforeToken() {
-        return orderService.generateOrderToken();
+    public RpsMsg getOrderBeforeToken(String commodityIds) {
+        //先检测订单中的商品是否下架
+        List<String> ids = JSONUtil.toList(commodityIds, String.class);
+        try {
+            RpsMsg rpsMsg = restTemplate.getForObject(SELLER_URL + "/commodity/check/state?commodityIds=" + JSONUtil.toJsonStr(ids), RpsMsg.class);
+            if (rpsMsg.getData() == null) {
+                return orderService.generateOrderToken();
+            } else {
+                return (Boolean) rpsMsg.getData() ? orderService.generateOrderToken() : new RpsMsg().setStausCode(400).setMsg("商品已下架");
+            }
+        } catch (Exception e) {
+            return orderService.generateOrderToken();
+        }
+
     }
 
     /*提交订单信息*/
@@ -118,7 +142,11 @@ public class OrderController {
     /*取消未发货的订单*/
     @PutMapping("/notrans/chanel")
     public RpsMsg chanelOrderDetail(String orderNumber, int odId, HttpSession session, HttpServletRequest request, HttpServletResponse response) {
-        return orderService.chanelOrderDetail(response, orderNumber, odId, (Long) session.getAttribute("phone"), request.getHeader("jwt"));
+        try {
+            return orderService.chanelOrderDetail(response, orderNumber, odId, (Long) session.getAttribute("phone"), request.getHeader("jwt"));
+        } catch (Exception e) {
+            return new RpsMsg().setMsg("系统繁忙").setStausCode(300);
+        }
     }
 
     /*修改订单状态为评论发布*/

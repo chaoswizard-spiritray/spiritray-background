@@ -18,7 +18,17 @@
         SELECT category.father,category.category_id
         FROM category
         WHERE
-        category_id IN
+        father IN
+        <foreach collection="ids" open="(" item="id" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="selectCateNameByIds" resultType="java.lang.String">
+        SELECT category.category_name
+        FROM category
+        WHERE
+        category.category_id IN
         <foreach collection="ids" open="(" item="id" separator="," close=")">
             #{id}
         </foreach>

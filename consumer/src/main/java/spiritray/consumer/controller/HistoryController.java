@@ -1,5 +1,6 @@
 package spiritray.consumer.controller;
 
+import cn.hutool.json.JSONUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import spiritray.common.pojo.DTO.RpsMsg;
@@ -34,17 +35,42 @@ public class HistoryController {
         return new RpsMsg().setStausCode(200).setData(historyMapper.selectLookRecentlyLongCommodityIdAndNoDelete(phone, num));
     }
 
+    /*获取指定用户所有历史记录*/
+    @GetMapping("/consumer/all")
+    public RpsMsg getConsumerAllHistory(HttpSession session) {
+        return new RpsMsg().setStausCode(200).setData(historyMapper.selectAllHistoryByPhone((Long) session.getAttribute("phone")));
+    }
+
+    /*批量删除指定id的历史记录*/
+    @PutMapping("/clear/many")
+    public RpsMsg deleteConsumerHistoryByHisId(String ids, HttpSession session) {
+        List<String> hisIds = JSONUtil.toList(ids, String.class);
+        if (hisIds == null || hisIds.size() == 0) {
+            return new RpsMsg().setStausCode(300).setMsg("没有选取");
+        } else {
+            historyMapper.updateHistoryIsdelete(hisIds);
+            return new RpsMsg().setMsg("清除成功").setStausCode(200);
+        }
+    }
+
+
     /*记录用户浏览历史信息*/
     @PostMapping("/add")
     public RpsMsg addHistory(int lookTime, String commodityId, HttpSession session) {
         History history = new History().setCommodityId(commodityId).setLookTime(lookTime);
         history.setConsumerPhone((Long) session.getAttribute("phone"));
         //先判断记录存不存在
-        if (historyMapper.selectNoDeleteHisByPhoneAndCommodityId((Long) session.getAttribute("phone"), history.getCommodityId()) != null) {
+        try {
             //存在直接更新
-            historyMapper.updateHisByPhoneAndCommodityId(history);
-            return new RpsMsg().setStausCode(200).setMsg("操作成功");
-        } else {
+            if (historyMapper.selectNoDeleteHisByPhoneAndCommodityId((Long) session.getAttribute("phone"), history.getCommodityId()) != null) {
+                historyMapper.updateHisByPhoneAndCommodityId(history);
+                return new RpsMsg().setStausCode(200).setMsg("操作成功");
+            } else {
+                history.setHisId(String.valueOf(UUID.randomUUID()));
+                historyMapper.insertHisOne(history);
+                return new RpsMsg().setStausCode(200).setMsg("操作成功");
+            }
+        } catch (Exception e) {
             //不存在就插入
             history.setHisId(String.valueOf(UUID.randomUUID()));
             historyMapper.insertHisOne(history);

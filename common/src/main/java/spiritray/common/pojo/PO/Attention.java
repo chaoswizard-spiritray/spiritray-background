@@ -5,26 +5,22 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+import java.sql.Timestamp;
+
 /**
- * ClassName:Commodity
+ * ClassName:Attention
  * Package:spiritray.common.pojo.PO
  * Description:
  *
- * @Date:2022/4/26 21:18
+ * @Date:2022/12/11 11:27
  * @Author:灵@email
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Accessors(chain = true)
-public class Commodity {
-    private String commodityId;
+public class Attention {
+    private Long consumerPhone;
     private String storeId;
-    private int categoryId;
-    private float shipping;//运费
-    private String commodityName;
-    private String masterMap;
-    private String commodityDescribe;
-    private String detail;//详情
-    private String address;
+    private Timestamp startDate;
 }

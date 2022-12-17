@@ -35,6 +35,13 @@
         </foreach>
     </insert>
 
+    <delete id="deleteAllCavByCommodityId">
+        DELETE FROM
+            cav
+        WHERE
+            cav.commodity_id = #{commodityId}
+    </delete>
+
     <select id="selectCategoryById" resultType="spiritray.common.pojo.PO.Category">
         SELECT
             category_id,

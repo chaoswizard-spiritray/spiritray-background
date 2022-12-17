@@ -26,6 +26,22 @@
         AND sku.sku_value = #{skuValue}
     </update>
 
+    <update id="updateSkuPriceOne">
+        UPDATE
+            sku
+        SET sku.sku_price = #{price}
+        WHERE
+            sku.commodity_id = #{commodityId}
+            AND sku.sku_value = #{skuValue}
+    </update>
+
+    <delete id="deleteSkuByCommodityId">
+        DELETE FROM
+            sku
+        WHERE
+            sku.commodity_id = #{commodityId}
+    </delete>
+
     <select id="selectSkuByCommodityId" resultType="spiritray.common.pojo.PO.Sku">
         SELECT *
         FROM
@@ -55,6 +71,8 @@
         SELECT sku.num
         FROM
             sku
+            JOIN commodity
+                ON sku.commodity_id = commodity.commodity_id
         WHERE
             sku.commodity_id = #{commodityId}
             AND sku.sku_value = #{skuValue}

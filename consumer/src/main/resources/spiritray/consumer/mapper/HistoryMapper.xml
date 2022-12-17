@@ -32,6 +32,20 @@
             is_delete = 0
     </update>
 
+    <update id="updateHistoryIsdelete">
+        UPDATE look_his
+        SET is_delete = 1
+        WHERE
+        is_delete = 0
+        <if test="ids!=null">
+            AND
+            his_id IN
+            <foreach collection="ids" separator="," item="id" close=")" open="(">
+                #{id}
+            </foreach>
+        </if>
+    </update>
+
     <select id="selectLookRecentlyLongCommodityIdAndNoDelete" resultType="java.lang.String">
         SELECT commodity_id
         FROM
@@ -84,5 +98,16 @@
                 LIMIT 0,#{val})
             </foreach>
         </if>
+    </select>
+
+    <select id="selectAllHistoryByPhone" resultType="spiritray.common.pojo.PO.History">
+        SELECT *
+        FROM
+            look_his
+        WHERE
+            consumer_phone = #{phone}
+            AND
+            is_delete = 0
+        ORDER BY start_date DESC
     </select>
 </mapper>

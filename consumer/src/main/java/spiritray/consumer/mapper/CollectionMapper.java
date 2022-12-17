@@ -18,6 +18,9 @@ import java.util.List;
 @Mapper
 @Repository
 public interface CollectionMapper {
+    /*查询指定用户所有收藏信息*/
+    public List<CommodityCollection> selectAllCollection(@Param("phone") long phone);
+
     /*查询指定用户收藏商品id*/
     public List<String> selectCollectionCommodityIdByPhone(@Param("phone") long phone);
 

@@ -21,12 +21,14 @@ import java.sql.Timestamp;
 @Accessors(chain = true)
 public class CloseStore {
     private String infoId;
+    private Long closeStaff;
     private String storeId;
-    private Timestamp applyDate;
-    private String applyCause;
+    private String sealCause;
+    private Timestamp startDate;
     private Long closeDay;
-    private Integer checkCode;
-    private Long checkStaff;
-    private Timestamp paseDate;
+    private Long overStaff;
+    private String overInfo;
+    private Timestamp overDate;
+    private Integer isOver;
     private Integer isDelete;
 }

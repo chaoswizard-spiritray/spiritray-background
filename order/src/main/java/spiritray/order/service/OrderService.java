@@ -38,7 +38,7 @@ public interface OrderService {
     public RpsMsg modifyOrderDetailAddressByOrderNumberAndOdId(String orderNumber, int odId, String address, HttpServletRequest request);
 
     /*取消指定未发货的订单细节记录*/
-    public RpsMsg chanelOrderDetail(HttpServletResponse response, String orderNumber, int odId, long phone, String jwt);
+    public RpsMsg chanelOrderDetail(HttpServletResponse response, String orderNumber, int odId, long phone, String jwt) throws Exception;
 
     /*修改指定买家的指定的订单细节状态为评论发布*/
     public RpsMsg modifyOrderStateToPublish(String orderNumber, Integer odId, Long phone);

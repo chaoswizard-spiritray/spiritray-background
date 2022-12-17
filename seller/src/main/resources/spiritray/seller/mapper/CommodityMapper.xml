@@ -24,11 +24,10 @@
 
     <insert id="insertCommodity">
         INSERT INTO commodity
-        (commodity_id, store_id, category_id, commodity_name, shipping, master_map, commodity_describe, address, publish_date)
+        (commodity_id, store_id, category_id, commodity_name, shipping, master_map, commodity_describe, address)
         VALUES
             (#{commodity.commodityId}, #{commodity.storeId}, #{commodity.categoryId}, #{commodity.commodityName},
-             #{commodity.shipping}, #{commodity.masterMap}, #{commodity.commodityDescribe}, #{commodity.address},
-             CURDATE())
+             #{commodity.shipping}, #{commodity.masterMap}, #{commodity.commodityDescribe}, #{commodity.address})
     </insert>
 
     <update id="updateCommodityState">
@@ -39,6 +38,13 @@
         WHERE
             commodity_id = #{commodityId}
     </update>
+
+    <delete id="deleteCommodityByCommodityId">
+        DELETE FROM
+            commodity
+        WHERE
+            commodity.commodity_id = #{commodityId}
+    </delete>
 
     <select id="selectInSellSimpleByStoreId" resultType="spiritray.common.pojo.DTO.InSellSimple">
         SELECT
@@ -82,18 +88,17 @@
     </select>
 
     <select id="selectNoSellSimpleByStoreId" resultType="spiritray.common.pojo.DTO.NoSellSimple">
-
         SELECT
-            commodity_id,
-            commodity_name,
-            master_map,
-            down_date,
-            down_commotion
-        FROM commodity
+            commodity.commodity_id,
+            commodity.commodity_name,
+            commodity.master_map,
+            down_info.down_date
+        FROM commodity JOIN down_info
+                ON commodity.commodity_id=down_info.commodity_id
         WHERE
-            store_id = #{storeId}
+            commodity.store_id = #{storeId}
             AND
-            is_publish = -1
+            commodity.status_code=-1
     </select>
 
     <select id="selectCommodityConsumerSimple" resultType="spiritray.common.pojo.DTO.CommodityConsumerSimple"
@@ -223,5 +228,48 @@
                 #{commodityId}
             </foreach>
         </if>
+    </select>
+
+    <select id="selectCommodityBrandByBrands" resultType="java.lang.String">
+        SELECT cav.attribute_value
+        FROM cav
+        LEFT JOIN attribute ON cav.attribute_id = attribute.attribute_id
+        WHERE attribute.attribute_name = '品牌'
+        AND
+        cav.attribute_value IN
+        <foreach collection="brands" item="brand" separator="," close=")" open="(">
+            #{brand}
+        </foreach>
+    </select>
+
+    <select id="selectCountInSellByCommodityIds" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM
+        commodity
+        WHERE
+        status_code=1
+        <if test="commodityIds!=null">
+            AND
+            commodity_id IN
+            <foreach collection="commodityIds" open="(" separator="," close=")" item="commodityId">
+                #{commodityId}
+            </foreach>
+        </if>
+    </select>
+
+    <select id="selectNoSellDetailByCommodityId" resultType="spiritray.common.pojo.DTO.NoSellDetail">
+        SELECT
+            commodity.commodity_id,
+            commodity.commodity_name,
+            commodity.master_map,
+            down_info.down_date,
+            down_info.down_des,
+            down_info.staff
+        FROM commodity JOIN down_info
+                ON commodity.commodity_id=down_info.commodity_id
+        WHERE
+            commodity.commodity_id = #{commodityId}
+            AND
+            commodity.status_code=-1
     </select>
 </mapper>

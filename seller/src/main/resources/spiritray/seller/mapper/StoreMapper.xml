@@ -71,7 +71,8 @@
         SET status=#{status}
         <if test="causeInf!=null">
             ,SET close_cause=#{causeInf},
-            SET close_date=now()
+            SET close_date=now(),
+            SET close_day=#{closeDay}
         </if>
         <where>
             store_id=#{store.storeId}
@@ -213,5 +214,26 @@
                     seller.seller_id = store.seller_id
         WHERE
             store.store_id = #{storeId}
+    </select>
+
+    <select id="selectStoreByRegexp" resultType="spiritray.common.pojo.DTO.SSMap">
+        SELECT
+            store_id   AS attribute_name,
+            store_name AS attribute_value
+        FROM store
+        WHERE
+            store.store_name REGEXP #{regexp}
+            AND
+            store.`status` = 1
+    </select>
+
+    <select id="selectTokenStoreByIds" resultType="spiritray.common.pojo.PO.Store">
+        <foreach collection="ids" item="id" open="(" close=")" separator="UNION">
+            (
+            SELECT *
+            FROM store
+            WHERE store.store_id=#{id}
+            )
+        </foreach>
     </select>
 </mapper>

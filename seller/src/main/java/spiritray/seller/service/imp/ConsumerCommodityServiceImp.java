@@ -3,26 +3,25 @@ package spiritray.seller.service.imp;
 import cn.hutool.extra.tokenizer.TokenizerUtil;
 import com.huaban.analysis.jieba.JiebaSegmenter;
 import com.huaban.analysis.jieba.WordDictionary;
-import lombok.SneakyThrows;
 import org.apache.tomcat.util.buf.Utf8Decoder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.client.RestTemplate;
+import spiritray.common.pojo.DTO.CommodityShop;
 import spiritray.common.pojo.DTO.HomeCommoditySimple;
 import spiritray.common.pojo.DTO.RpsMsg;
+import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.Category;
 import spiritray.seller.mapper.CategoryMapper;
 import spiritray.seller.mapper.CommodityMapper;
 import spiritray.seller.mapper.ConsumerCommodityMapper;
 import spiritray.seller.service.ConsumerCommodityService;
 
-import java.io.*;
+import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -49,6 +48,9 @@ public class ConsumerCommodityServiceImp implements ConsumerCommodityService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     private JiebaSegmenter jiebaSegmenter = new JiebaSegmenter();
 
@@ -89,7 +91,7 @@ public class ConsumerCommodityServiceImp implements ConsumerCommodityService {
                     allTypes.remove(index);
                 }
             }
-            data = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRateByTypes(resultTypes, pageNum*recordNum, recordNum);
+            data = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRateByTypes(resultTypes, pageNum * recordNum, recordNum);
         } else {
             //得到浏览商品id
             List<String> hisCommodityIds = (List<String>) restTemplate.getForObject(CONSUMER_URL + "/history/recommend/" + phone + "/10/10/3/3", RpsMsg.class).getData();
@@ -108,7 +110,7 @@ public class ConsumerCommodityServiceImp implements ConsumerCommodityService {
             }
             //判断长度
             if (types.size() >= checkTypeNum) {
-                data = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRateByTypes(types, pageNum*recordNum, recordNum);
+                data = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRateByTypes(types, pageNum * recordNum, recordNum);
             } else {
                 //如果小于，就补充
                 List<Integer> allTypes = commodityMapper.selectCommodityCateIdByCommoditys(null);
@@ -134,7 +136,7 @@ public class ConsumerCommodityServiceImp implements ConsumerCommodityService {
                     }
                 }
                 //使用最终的种类查询商品
-                data = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRateByTypes(types, pageNum*recordNum, recordNum);
+                data = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRateByTypes(types, pageNum * recordNum, recordNum);
             }
 
         }
@@ -142,9 +144,9 @@ public class ConsumerCommodityServiceImp implements ConsumerCommodityService {
         if (data.size() < recordNum) {
             //判断查询出来的数目，假设结果已经查询
             //条数不够说明系统至少有pageNum*recordNum+recordNum条
-            int newPage = ((pageNum * recordNum + recordNum) / (recordNum - data.size()))/2;
+            int newPage = ((pageNum * recordNum + recordNum) / (recordNum - data.size())) / 2;
             pageNum = ThreadLocalRandom.current().nextInt(newPage);
-            List<HomeCommoditySimple> temp = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRate(pageNum*(recordNum - data.size())*2, (recordNum - data.size())*2);
+            List<HomeCommoditySimple> temp = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRate(pageNum * (recordNum - data.size()) * 2, (recordNum - data.size()) * 2);
             //将补充数据加入
             data.addAll(temp);
         }
@@ -153,64 +155,206 @@ public class ConsumerCommodityServiceImp implements ConsumerCommodityService {
 
     @Override
     public RpsMsg queryConsumerCommodityDetail(String commodityId) {
-        return new RpsMsg().setData(consumerCommodityMapper.selectCommodityShopByCommodityId(commodityId)).setStausCode(200);
-    }
+        try {
+            CommodityShop commodityShop = consumerCommodityMapper.selectCommodityShopByCommodityId(commodityId);
+            if (commodityShop == null)
+                return new RpsMsg().setStausCode(400).setMsg("商品已下架");
+            else
+                return new RpsMsg().setStausCode(200).setData(commodityShop);
 
-    @Override
-    public RpsMsg queryConsumerCommoditySearch(String word) {
-        //解析搜索词，人们再搜索商品时，搜索词往往是包含某一品牌、种类、属性值、不确定的商品名，其他可能是价格或者是乱输入的符号。
-        //优先级如下：种类、商品名、商品属性值。-----注意：每个分词是整个分词系统中的不可再分的字符串。
-        /*具体逻辑如下：
-         *   前提条件：我们预先将当前售卖中的商品的种类（-一般作为不可再分）、名称、属性值、sku价格进行了分词，并将其导入到了自定义分词文件中，
-         *   且将所有分词指明分词来源-种类、名称、属性值。。存储到数据库中的系统分词表
-         *
-         *   查询逻辑：
-         *   1、先按照自定义分词表对查询内容进行分词，得到一个查询集合。
-         *   2、将这个查询集合与数据库中的分词表进行比对，剔除在数据库不存在的分词。并得到剩下分词位于商品来源
-         *   3、将分词按照来源分组，并按照长度进行排序。
-         *   4、将对应来源的分词与对应字段进行匹配得到查询结果
-         *
-         * */
-            //加载自定义配置字典
-            WordDictionary.getInstance().loadUserDict(Paths.get(new File(ClassUtils.getDefaultClassLoader().getResource("").getPath() + "/dict/commodity.dict").getAbsolutePath()), new Utf8Decoder().charset());
-            //将用户输入分词
-            List<String> list = new ArrayList<>();
-            StringBuilder regex = new StringBuilder("");//匹配串
-            TokenizerUtil.createEngine().parse(word).forEach(s -> {
-                list.add(s.getText());
-                regex.append(s.getText()).append('|');
-            });
-            String regexTemp = regex.toString();
-            if (regexTemp.lastIndexOf('|') == regexTemp.length() - 1) {
-                regex.deleteCharAt(regexTemp.length() - 1);
-            }
-            //先匹配商品种类
-            System.out.println(list);
-            System.out.println(regex.toString());
-            List<Integer> matchCategorys = categoryMapper.selectCategoryIdByToken(regex.toString());//得到匹配到的分词种类
-            List<Integer> resultCategorys = new ArrayList<>();//最终需要查询的种类
-            //当种类能够匹配到分词时，统计出所有的应该加载的种类，避免单个字符触发种类匹配，将种类导入自定义的分词字典
-            if (matchCategorys.size() > 0) {
-                //循环获取子种类直到父种类队列为空
-                while (matchCategorys.size() == 0) {
-                    //得到当前父种类下的子类
-                    List<Category> categories = categoryMapper.selectCategoryChildIdAndFatherIdByFatherId(matchCategorys);
-                    if (categories.size() == 0) {
-                        //如果查询没有结果，将当前父种类完全加入，直接结束
-                        resultCategorys.addAll(matchCategorys);
-                        break;
-                    }
-                    //如果有结果过滤出已经没有子类的父类
-                    Set<Integer> set = new HashSet<>(matchCategorys);
-                    matchCategorys.clear();//清空原数组
-                    //因为查询结果的父id必然是数组的子集
-                    matchCategorys.clear();//清除父类
-                    matchCategorys.addAll(categories.stream().map(Category::getCategoryId).collect(Collectors.toSet()));//加入新的遍历集合
-                    set.removeAll(categories.stream().map(Category::getFather).collect(Collectors.toSet()));//过滤出结果集
-                    resultCategorys.addAll(set);//添加结果集
-                }
-            }
-            //匹配商品
-            return new RpsMsg().setData(matchCategorys);
+        } catch (Exception e) {
+            return new RpsMsg().setStausCode(400).setMsg("商品已下架");
         }
     }
+
+    /*
+     * 检索维度：商品名、商品种类、商品品牌(依次往后，检索范围逐步扩大，当前面的数据已经搜索完，后面的补充上)。基于内存排序以及分页
+     * 商品名检索权重初始化策略：
+     *   - 策略：分词字数越多，权重越大。每个分词的初始权重设置为词的长度。
+     *   - 额外初始化增加策略：贪心策略，按照一般人说话的逻辑，往往会将重要的名词放在后面，前面会添加修饰词。
+     *       所以我们这个策略是位置越后，额外增加的权重越多。初始额外权重为分词数组的索引下标。
+     * 商品名检索权重计算策略:
+     *   - 普通策略：将匹配到的分词权重进行累加即可
+     *   - 额外累加策略：当商品名中匹配到的分词是商品种类、商品品牌时，额外增加5权重。
+     *   前提条件：我们预先将当前售卖中的商品的种类（-一般作为不可再分）、名称、属性值、sku价格进行了分词，并将其导入到了自定义分词文件中，
+     *   且将所有分词指明分词来源-种类、名称、属性值。。存储到数据库中的系统分词表
+     * 参数说明：
+     * String word：搜索词
+     * int pageNo：页号
+     * int pageNum：每页数目
+     * Map params：额外参数、如上架时间、价格区间。按照价格、时间、好评率排序
+     * */
+    @Override
+    public RpsMsg queryConsumerCommoditySearch(String word, int pageNo, int pageNum, Map params) {
+        //加载自定义配置字典
+        WordDictionary.getInstance().loadUserDict(Paths.get(new File(ClassUtils.getDefaultClassLoader().getResource("").getPath() + "/dict/commodity.dict").getAbsolutePath()), new Utf8Decoder().charset());
+        //将用户输入分词
+        List<String> list = new ArrayList<>();
+        TokenizerUtil.createEngine().parse(word).forEach(s -> {
+            list.add(s.getText());
+        });
+        //将分词去重
+        list.stream().distinct().count();
+        //然后拼接匹配模式
+        StringBuilder regex = new StringBuilder("");//种类匹配模式
+        list.stream().peek(s -> {
+            regex.append(s).append('|');
+        }).count();
+        String regexTemp = regex.toString();
+        if (regexTemp.lastIndexOf('|') == regexTemp.length() - 1) {
+            regex.deleteCharAt(regexTemp.length() - 1);
+        }
+        //先匹配商品种类
+        List<Integer> matchCategorys = categoryMapper.selectCategoryIdByToken(regex.toString());//得到匹配到的分词种类
+        Set<Integer> resultCategorys = new HashSet<>();//最终需要查询的种类,因为可能存在父类和子类都含有分词，从而导致结果有重复，我们需要进行去重,所以使用集合
+        //当种类能够匹配到分词时，统计出所有的应该加载的种类，避免单个字符触发种类匹配，将种类导入自定义的分词字典
+        if (matchCategorys.size() > 0) {
+            //循环获取子种类直到父种类队列为空
+            while (matchCategorys.size() > 0) {
+                //得到当前父种类下的子类
+                List<Category> categories = categoryMapper.selectCategoryChildIdAndFatherIdByFatherId(matchCategorys);
+                if (categories.size() == 0) {
+                    //如果查询没有结果，将当前父种类完全加入，直接结束
+                    resultCategorys.addAll(matchCategorys);
+                    break;
+                }
+                //如果有结果过滤出已经没有子类的父类
+                Set<Integer> set = new HashSet<>(matchCategorys);
+                //因为查询结果的父id必然是数组的子集
+                matchCategorys.clear();//清除父类
+                matchCategorys.addAll(categories.stream().map(Category::getCategoryId).collect(Collectors.toSet()));//加入新的遍历集合
+                set.removeAll(categories.stream().map(Category::getFather).collect(Collectors.toSet()));//过滤出结果集
+                resultCategorys.addAll(set);//添加结果集
+            }
+        }
+        //再检索分词中是否有品牌属性
+        Set<String> brands = new HashSet<>(commodityMapper.selectCommodityBrandByBrands(list));
+        //通过匹配模式匹配商品名，并获取商品名、商品id
+        List<SSMap> commodityNameAndIds = consumerCommodityMapper.selectCommodityIdAndNameByTokens(regex.toString(), params);
+        Map<String, Integer> commodityWeights = new HashMap<>();
+        //计算权重
+        Set<String> cateNames = null;
+        if (!resultCategorys.isEmpty()) {
+            cateNames = new HashSet<>(categoryMapper.selectCateNameByIds(new ArrayList<>(resultCategorys)));
+        }
+        String hotWord = computeCommodityNamesWeight(list, cateNames, brands.isEmpty() ? null : brands, commodityNameAndIds, commodityWeights);
+        //统计搜索词
+        if (pageNo == 0) {
+            //如果是新产生搜索，就将搜索词加入统计
+            addHotWord(hotWord);
+        }
+        //按权重降序
+        List<Map.Entry<String, Integer>> resultCommoditys = orderCommodityByWeight(commodityWeights);
+        //截取指定的商品数目
+        List<Map.Entry<String, Integer>> tempCommoditys = spliceCommoditys(resultCommoditys, pageNo, pageNum);
+        List<HomeCommoditySimple> commoditySimples = commoditySimples = null;
+        if (tempCommoditys.size() > 0) {
+            commoditySimples = consumerCommodityMapper.selectHomeCommoditySimpleOrderByfavorableRateByCommodityIds(tempCommoditys.stream().map(Map.Entry::getKey).collect(Collectors.toList()), params);
+        }
+        //判断是否截取到数据
+        if (tempCommoditys.size() < pageNum) {
+            //依次获取种类和品牌范围商品
+            List<HomeCommoditySimple> tempHomeCommoditySimples = null;
+            if (!resultCategorys.isEmpty()) {
+                tempHomeCommoditySimples = consumerCommodityMapper.selectHomeCommoditySimpleTokenByParamsByTypes(new ArrayList<>(resultCategorys), params);
+            }
+            if (!brands.isEmpty()) {
+                if (tempHomeCommoditySimples == null) {
+                    tempHomeCommoditySimples = consumerCommodityMapper.selectHomeCommoditySimpleTokenByParamsByBrands(new ArrayList<>(brands), params);
+                } else {
+                    tempHomeCommoditySimples.addAll(consumerCommodityMapper.selectHomeCommoditySimpleTokenByParamsByBrands(new ArrayList<>(brands), params));
+                }
+            }
+            if (tempHomeCommoditySimples != null) {
+                if (commoditySimples == null) {
+                    commoditySimples = tempHomeCommoditySimples;
+                } else {
+                    commoditySimples.addAll(tempHomeCommoditySimples);
+                }
+            }
+        }
+        //去重
+        Set tempset = new HashSet();
+        return new RpsMsg().setStausCode(200).setData((commoditySimples == null || commoditySimples.isEmpty()) ? null : commoditySimples.stream().filter(s -> {
+            if (tempset.contains(s.getCommodityId())) {
+                return false;
+            } else {
+                tempset.add(s.getCommodityId());
+                return true;
+            }
+        }).collect(Collectors.toList()));
+    }
+
+    /*计算每个商品名的权重,并找寻最大匹配权重组合分词*/
+    private String computeCommodityNamesWeight(List<String> tokens, Set<String> cates, Set<String> brands, List<SSMap> commodityNameAndIds, Map<String, Integer> weights) {
+        //初始化分词权重
+        List<Integer> tokenWeights = initTokenWeight(tokens);
+        String maxMatchToken = null;
+        int maxMatchWeight = 0;
+        for (SSMap commodityNameAndId : commodityNameAndIds) {
+            //匹配分词并计算权重
+            int weight = 0;
+            StringBuffer tempStringBuffer = new StringBuffer("");
+            for (int i = 0; i < tokens.size(); i++) {
+                if (commodityNameAndId.getAttributeValue().indexOf(tokens.get(i)) > -1) {
+                    //如果匹配成功
+                    weight += tokenWeights.get(i);
+                    tempStringBuffer.append(tokens.get(i));
+                    //再判断是否是种类名或者品牌，是就额外增加权重,因为
+                    if (cates != null && cates.contains(tokens.get(i))) {
+                        weight += 5;
+                    }
+                    if (brands != null && brands.contains(tokens.get(i))) {
+                        weight += 5;
+                    }
+                }
+            }
+            //每次商品循环匹配完成后得到权重最大连续匹配分词组合，与全局最大权重连续匹配分词组合比较
+            if (weight >= maxMatchWeight) {
+                maxMatchWeight = weight;
+                maxMatchToken = tempStringBuffer.toString();
+            }
+            //保存商品id及其权重
+            weights.put(commodityNameAndId.getAttributeName(), weight);
+        }
+        //最后返回的就是我们本次搜索词中提取的得到的热词
+        return maxMatchToken;
+    }
+
+    /*初始化分词权重*/
+    private List<Integer> initTokenWeight(List<String> tokens) {
+        List<Integer> tokenWeights = new ArrayList<>();
+        for (int i = 0; i < tokens.size(); i++) {
+            tokenWeights.add(tokens.get(i).length() + i);
+        }
+        return tokenWeights;
+    }
+
+    /*将商品权重进行降序排列*/
+    private List orderCommodityByWeight(Map<String, Integer> weights) {
+        //将组合分词按照权重降序
+        return new ArrayList<>(weights.entrySet()).stream().sorted(new Comparator<Map.Entry<String, Integer>>() {
+            @Override
+            public int compare(Map.Entry<String, Integer> o1, Map.Entry<String, Integer> o2) {
+                if (o1.getValue() > o2.getValue()) {
+                    return -1;
+                } else {
+                    return 1;
+                }
+            }
+        }).collect(Collectors.toList());
+    }
+
+    //截取指定商品
+    private List<Map.Entry<String, Integer>> spliceCommoditys(List<Map.Entry<String, Integer>> commoditys,
+                                                              int pageNo, int pageNum) {
+        return commoditys.stream().skip(pageNo * pageNum).limit(pageNum).collect(Collectors.toList());
+    }
+
+    /*添加热词*/
+    private void addHotWord(String hotWord) {
+        String hotWordSet = "hotWordSet";
+        redisTemplate.opsForZSet().incrementScore(hotWordSet, hotWord, 1);
+    }
+}
+

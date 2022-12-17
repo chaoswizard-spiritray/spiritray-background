@@ -12,9 +12,14 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import spiritray.common.pojo.DTO.RpsMsg;
+import spiritray.common.pojo.PO.Msg;
+import spiritray.common.tool.SystemMsgNotice;
 import spiritray.order.mapper.OrderDetailMapper;
 
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * ClassName:RedisKeyExpirationListener
@@ -66,7 +71,16 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
             restTemplate.exchange("http://localhost:8081/sku/add", HttpMethod.PUT, httpEntity, RpsMsg.class);
             //删除订单细节记录
             orderDetailMapper.updateDetailDeleteById(orderNo, odId);
-            System.out.println("订单超时自动取消");
+            //通知买家订单取消
+            SystemMsgNotice.notieMsg(restTemplate, new Msg()
+                    .setMsg("您的订单:" + orderNo + odId + "已超时自动取消")
+                    .setMsgId(String.valueOf(UUID.randomUUID()))
+                    .setMsgType("text")
+                    .setReceiverRole(1)
+                    .setSender(0L)
+                    .setSenderRole(0)
+                    .setSendDate(new Timestamp(new Date().getTime()))
+                    .setReceiver(orderDetailMapper.selectOrderDetailInfo(orderNo, odId).getConsumerPhone()));
         }
     }
 }

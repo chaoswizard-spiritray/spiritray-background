@@ -20,6 +20,13 @@ import java.util.List;
 @Mapper
 @Repository
 public interface SkuMapper {
+
+    /*修改指定sku的价格*/
+    public int updateSkuPriceOne(@Param("commodityId") String commodityId, @Param("skuValue") String skuValue, @Param("price") float price);
+
+    /*删除指定商品下的所有sku*/
+    public int deleteSkuByCommodityId(@Param("commodityId") String commodityId);
+
     /*添加sku数组*/
     public int insertSkus(@Param("skus") List<Sku> skus);
 

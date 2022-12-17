@@ -17,6 +17,15 @@ import java.util.List;
  */
 @Repository
 public interface CommodityMapper {
+    /*删除指定商品*/
+    public int deleteCommodityByCommodityId(@Param("commodityId") String commodityId);
+
+    /*查询指定商品id范围内的在售商品的数目*/
+    public Long selectCountInSellByCommodityIds(@Param("commodityIds") List<String> commodityIds);
+
+    /*查询当前商品品牌中是否存在指定品牌*/
+    public List<String> selectCommodityBrandByBrands(@Param("brands")List<String>brands);
+
     /*查询商品的种类Id*/
     public List<Integer> selectCommodityCateIdByCommoditys(@Param("commodityIds") List<String> commodityIds);
 
@@ -46,6 +55,9 @@ public interface CommodityMapper {
 
     /*查询已下架商品简洁信息*/
     public List<NoSellSimple> selectNoSellSimpleByStoreId(@Param("storeId") String storeId);
+
+    /*查询指定已下架商品详细信息*/
+    public List<NoSellDetail> selectNoSellDetailByCommodityId(@Param("commodityId") String commodity);
 
     /*查询买家端商品简洁信息*/
     public List<CommodityConsumerSimple> selectCommodityConsumerSimple(@Param("condition") CommodityCondition condition);

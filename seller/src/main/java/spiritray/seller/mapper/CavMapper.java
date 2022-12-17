@@ -19,6 +19,9 @@ import java.util.List;
  */
 @Repository
 public interface CavMapper {
+    /*删除指定商品id的所有属性*/
+    public int deleteAllCavByCommodityId(@Param("commodityId") String commodityId);
+
     /*通过种类id查询商品种类信息*/
     public List<Category> selectCategoryById(int id);
 

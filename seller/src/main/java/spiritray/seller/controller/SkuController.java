@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SSMap;
+import spiritray.seller.mapper.SkuMapper;
 import spiritray.seller.service.SkuService;
 
 import java.util.ArrayList;
@@ -23,6 +24,9 @@ import java.util.List;
 public class SkuController {
     @Autowired
     private SkuService skuService;
+
+    @Autowired
+    private SkuMapper skuMapper;
 
     /*查询指定商品的sku*/
     @GetMapping("/all/{commodityId}")
@@ -57,5 +61,12 @@ public class SkuController {
     @PutMapping("/add")
     public RpsMsg addSkuNum(String commodityId, String skuValue, int num) {
         return skuService.addSkuNum(commodityId, skuValue, num);
+    }
+
+    /*调整指定sku的价格*/
+    @PutMapping("/simple/price")
+    public RpsMsg modifySkuPrice(String commodityId, String skuValue, float price) {
+        skuMapper.updateSkuPriceOne(commodityId, skuValue, price);
+        return new RpsMsg().setMsg("修改成功").setStausCode(200);
     }
 }

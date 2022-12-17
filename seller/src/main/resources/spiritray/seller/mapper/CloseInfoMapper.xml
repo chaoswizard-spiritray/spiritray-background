@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.CloseInfoMapper">
+
+    <select id="selectCloseInfoByStoreId" resultType="spiritray.common.pojo.PO.CloseStore">
+        SELECT close_store.*
+        FROM close_store
+            JOIN store
+                ON close_store.store_id = store.store_id
+        WHERE
+            close_store.store_id = #{storeId}
+            AND
+            store.`status` = 2
+            AND
+            close_store.is_over = 0
+    </select>
+</mapper>

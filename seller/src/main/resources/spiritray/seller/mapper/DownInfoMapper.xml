@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.DownInfoMapper">
+
+    <insert id="insertDownInfoOne">
+        INSERT INTO
+            down_info VALUES (
+            #{downInfo.commodityId},
+            #{downInfo.downDate},
+            #{downInfo.downDes},
+            #{downInfo.staff})
+    </insert>
+
+    <delete id="deleteDownInfoManyByCommodityId">
+        DELETE FROM down_info
+        WHERE
+            down_info.commodity_id IN
+        <foreach collection="commodityIds" open="(" close=")" item="commodityId" separator=",">
+            #{commodityId}
+        </foreach>
+    </delete>
+</mapper>

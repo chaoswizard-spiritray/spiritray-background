@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 import spiritray.common.pojo.PO.History;
 
 import java.sql.Date;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +20,11 @@ import java.util.Map;
 @Mapper
 @Repository
 public interface HistoryMapper {
+    /*查询所有历史记录*/
+    public List<History> selectAllHistoryByPhone(@Param("phone") long phone);
+
+    /*删除指定id范围的历史记录*/
+    public int updateHistoryIsdelete(@Param("ids") List<String> ids);
 
     /*获取指定用户最近浏览时间最长的指定条数的未删除商品*/
     public List<String> selectLookRecentlyLongCommodityIdAndNoDelete(@Param("phone") long phone, @Param("num") int num);

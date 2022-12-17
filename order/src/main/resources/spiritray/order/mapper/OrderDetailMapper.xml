@@ -246,8 +246,14 @@
         od.store_id=#{storeId}
         AND
         od.is_delete=0
-        AND
-        od.state=#{type}
+        <if test="type!=3">
+            AND
+            od.state =#{type}
+        </if>
+        <if test="type==3">
+            AND
+            od.state IN(3,4)
+        </if>
         <if test="params!=null">
             <if test="params.startTime!=null">
                 AND
@@ -330,6 +336,33 @@
                     `order`.order_number = order_detail.order_number
         WHERE
             `order`.consumer_phone = #{phone}
+    </select>
+
+    <select id="selectCommodityIdsByOrderNumber" resultType="java.lang.String">
+        SELECT commodity_id
+        FROM order_detail
+        WHERE
+            order_number = #{orderNumber}
+    </select>
+
+    <select id="selectCommodityIdsByOrderNumberAndOdId" resultType="java.lang.String">
+        SELECT commodity_id
+        FROM order_detail
+        WHERE
+            order_number = #{orderNumber}
+            AND
+            od_id = #{odId}
+    </select>
+
+    <select id="selectCountNoOverOrder" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM order_detail
+        WHERE
+            order_detail.store_id = #{storeId}
+            AND
+            order_detail.is_delete = 0
+            AND
+            order_detail.state IN (1, 2)
     </select>
 
 </mapper>

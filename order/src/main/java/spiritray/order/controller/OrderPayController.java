@@ -17,6 +17,7 @@ import spiritray.common.pojo.BO.AliAppPayParam;
 import spiritray.common.pojo.BO.AppPayRps;
 import spiritray.common.pojo.BO.BackPayParam;
 import spiritray.common.pojo.BO.WechatAppPayParam;
+import spiritray.common.pojo.DTO.OrderBeforeCommodity;
 import spiritray.common.pojo.DTO.RpsMsg;
 import spiritray.common.pojo.DTO.SSMap;
 import spiritray.common.pojo.PO.*;
@@ -30,6 +31,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * ClassName:OrderPayController
@@ -72,6 +75,11 @@ public class OrderPayController {
     /*总订单支付*/
     @GetMapping("/together/{payCate}/{orderId}")
     public RpsMsg getOrderPayTogether(@PathVariable int payCate, @PathVariable String orderId) {
+        //先检测订单所属商品是否已经下架
+        List<String> ids = orderDetailMapper.selectCommodityIdsByOrderNumber(orderId);
+        if (!checkCommoditysIsDown(ids)) {
+            return new RpsMsg().setMsg("无法支付，因为订单存在已下架商品").setStausCode(400);
+        }
         //验证订单是否已经付款
         if (orderDetailMapper.selectOrderDetailPaidByOrderNumber(orderId).size() > 0) {
             return new RpsMsg().setStausCode(300).setMsg("订单已付款");
@@ -113,9 +121,28 @@ public class OrderPayController {
         }
     }
 
+    /*检测订单商品是否下架*/
+    private boolean checkCommoditysIsDown(List<String> ids) {
+        try {
+            RpsMsg rpsMsg = restTemplate.getForObject(SELLER_URL + "/commodity/check/state?commodityIds=" + JSONUtil.toJsonStr(ids), RpsMsg.class);
+            if (rpsMsg.getData() == null) {
+                return false;
+            } else {
+                return (Boolean) rpsMsg.getData() ? true : false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /*订单细节单独支付*/
     @GetMapping("/detail/{payCate}/{orderId}/{ooId}")
     public RpsMsg getOrderPayDetail(@PathVariable int payCate, @PathVariable String orderId, @PathVariable int ooId) {
+        //先检测订单所属商品是否已经下架
+        List<String> ids = orderDetailMapper.selectCommodityIdsByOrderNumberAndOdId(orderId, ooId);
+        if (!checkCommoditysIsDown(ids)) {
+            return new RpsMsg().setMsg("无法支付，因为商品已下架").setStausCode(400);
+        }
         //验证订单是否已经付款
         int state = orderDetailMapper.selectDetailStateById(orderId, ooId);
         if (state > 0) {
@@ -302,7 +329,7 @@ public class OrderPayController {
         //创建请求实体对象
         HttpHeaders httpHeaders = new HttpHeaders();
         HttpEntity httpEntity = new HttpEntity(httpHeaders);
-        RpsMsg rpsMsg = restTemplate.exchange(SELLER_URL + "/store/account/receive/" + storeId+"/"+cate, HttpMethod.GET, httpEntity, RpsMsg.class).getBody();
+        RpsMsg rpsMsg = restTemplate.exchange(SELLER_URL + "/store/account/receive/" + storeId + "/" + cate, HttpMethod.GET, httpEntity, RpsMsg.class).getBody();
         if (rpsMsg != null && rpsMsg.getStausCode() == 200 && rpsMsg.getData() != null) {
             //因为resttemplate返回的是一个map,通过json中间转换为我们需要的类型
             return JSONUtil.toBean(JSONUtil.parseObj(rpsMsg.getData()), SellerAccount.class);

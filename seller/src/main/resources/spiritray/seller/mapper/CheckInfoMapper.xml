@@ -30,9 +30,21 @@
         </where>
     </update>
 
+    <update id="updateCheckInfoCodeAndClear">
+        UPDATE check_info
+        SET
+            apply_date = NOW(),
+            check_date = NULL,
+            staff_id   = NULL,
+            remark     = NULL,
+            check_code = 0
+        WHERE
+            check_info.commodity_id = #{commodityId}
+    </update>
+
     <delete id="deleteCheckInfo">
         DELETE FROM check_info
-        WHERE commodity_id = #{checkinfo.commodityId}
+        WHERE check_info.commodity_id = #{commodityId}
     </delete>
 
     <select id="selectCheckInfoExtend" resultType="spiritray.common.pojo.DTO.CheckInfoExtend">

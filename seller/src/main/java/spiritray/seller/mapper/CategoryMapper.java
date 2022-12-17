@@ -26,4 +26,7 @@ public interface CategoryMapper {
 
     /*插入指定种类*/
     public Integer insertCategory(@Param("cate") Category category);
+
+    /*通过id查询种类名*/
+    public List<String>selectCateNameByIds(@Param("ids") List<Integer> ids);
 }

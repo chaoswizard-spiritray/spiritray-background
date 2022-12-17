@@ -26,9 +26,8 @@ public class CommodityClickController {
 
     /*记录点击商品点击量*/
     @PostMapping("/num")
-    public RpsMsg addClick(String commodityId, HttpSession session) {
-        Long phone = (Long) session.getAttribute("phone");
-        redisTemplate.opsForSet().add(commodityId, phone);
+    public RpsMsg addClick(String commodityId) {
+        redisTemplate.opsForZSet().incrementScore("commodityClicks", commodityId, 1);
         return new RpsMsg().setMsg("添加成功").setStausCode(200);
     }
 

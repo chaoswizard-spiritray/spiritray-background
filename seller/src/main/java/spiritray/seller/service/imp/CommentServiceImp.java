@@ -113,7 +113,6 @@ public class CommentServiceImp implements CommentService {
         multiValueMap.add("consumerPhones", JSONUtil.toJsonStr(phones));
         //获取评论昵称、头像
         RpsMsg rpsMsg = restTemplate.getForObject(CONSUMER_URL + "/consumer/headAndName/many?consumerPhones=" + JSONUtil.toJsonStr(phones), RpsMsg.class);
-
         //提取数据
         Map<Long, SSMap> nickNameAndHead = (Map<Long, SSMap>) rpsMsg.getData();
         Map<String, String> skus = new HashMap<>();

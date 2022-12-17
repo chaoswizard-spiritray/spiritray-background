@@ -36,4 +36,12 @@
             AND
             commodity_id = #{commodityId}
     </select>
+
+    <select id="selectAllCollection" resultType="spiritray.common.pojo.PO.CommodityCollection">
+        SELECT *
+        FROM
+            collection
+        WHERE
+            consumer_phone = #{phone}
+    </select>
 </mapper>

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spiritray.seller.mapper.BeforeStoreMapper">
+    <sql id="favorableRateAndMinAndMaxPrice">
+        SELECT
+            g.commodity_id,
+            g.favorable_rate,
+            h.price_min,
+            h.price_max
+        FROM
+            (
+                SELECT
+                    a.commodity_id,
+                    b.good_comment / a.all_comment AS favorable_rate
+                FROM
+                    (
+                        SELECT
+                            commodity.commodity_id,
+                            COUNT(*) AS all_comment
+                        FROM
+                            commodity
+                            LEFT JOIN `comment`
+                                ON
+                                    commodity.commodity_id = `comment`.commodity_id
+                        GROUP BY commodity.commodity_id
+                    ) a
+                    JOIN
+                    (
+                        SELECT
+                            commodity.commodity_id,
+                            COUNT(*) AS good_comment
+                        FROM
+                            commodity
+                            LEFT JOIN `comment`
+                                ON
+                                    commodity.commodity_id = `comment`.commodity_id
+                        WHERE
+                            `comment`.star_level > 3
+                            OR
+                            `comment`.comment_no IS NULL
+                        GROUP BY commodity.commodity_id
+                    ) b
+                        ON
+                            a.commodity_id = b.commodity_id
+            ) g
+            JOIN
+            (
+                SELECT
+                    e.commodity_id,
+                    e.price_min,
+                    f.price_max
+                FROM
+                    (
+                        SELECT
+                            c.commodity_id,
+                            c.sku_price AS price_min
+                        FROM
+                            (
+                                SELECT
+                                    commodity_id,
+                                    sku_price
+                                FROM
+                                    sku
+                                ORDER BY commodity_id, sku.sku_price
+                            ) c
+                        GROUP BY c.commodity_id
+                    ) e
+                    JOIN
+                    (
+                        SELECT
+                            d.commodity_id,
+                            d.sku_price AS price_max
+                        FROM
+                            (
+                                SELECT
+                                    commodity_id,
+                                    sku_price
+                                FROM
+                                    sku
+                                ORDER BY commodity_id, sku.sku_price DESC
+                            ) d
+                        GROUP BY d.commodity_id
+                    ) f
+                        ON e.commodity_id = f.commodity_id
+            ) h
+                ON g.commodity_id = h.commodity_id
+    </sql>
+
+    <update id="updateDownCommodityByStoreId">
+        UPDATE commodity
+        SET status_code = -1
+        WHERE store_id = #{storeId}
+              AND status_code = 1
+    </update>
+
+    <delete id="deleteAllNoSellCommodityByStoreId">
+        DELETE FROM commodity
+        WHERE store_id = #{storeId}
+              AND status_code = -1
+    </delete>
+
+    <select id="selectAllCommoditysByStorejId" resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+        SELECT i.*, commodity.master_map, commodity.commodity_name
+        FROM
+        commodity JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id= i.commodity_id
+        WHERE commodity.store_id=#{storeId}
+        AND
+        commodity.status_code=1
+    </select>
+
+    <select id="selectRecentCommoditysByStorejId" resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+        SELECT i.*, temp.master_map, temp.commodity_name
+        FROM
+        (
+        SELECT commodity.commodity_id, commodity.master_map, commodity.commodity_name
+        FROM commodity JOIN check_info
+        ON commodity.commodity_id=check_info.commodity_id
+        WHERE
+        check_info.check_code=1
+        AND
+        commodity.status_code=1
+        AND
+        commodity.store_id=#{storeId}
+        AND
+        <![CDATA[DATEDIFF(NOW(),check_info.check_date)<=7 ]]>
+        )temp
+        JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON temp.commodity_id= i.commodity_id
+    </select>
+
+    <select id="selectStoreAllCategory" resultType="spiritray.common.pojo.PO.Category">
+        SELECT DISTINCT category.*
+        FROM commodity
+            JOIN category
+                ON commodity.category_id = category.category_id
+        WHERE commodity.store_id = #{storeId}
+              AND
+              commodity.status_code = 1
+    </select>
+
+    <select id="selectAllCommoditysByStoreIdByCateId"
+            resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+        SELECT i.*, commodity.master_map, commodity.commodity_name
+        FROM
+        commodity JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id= i.commodity_id
+        WHERE commodity.store_id=#{storeId}
+        AND
+        commodity.status_code=1
+        AND
+        commodity.category_id=#{cateId}
+    </select>
+
+    <select id="selectSellerCloseInfo" resultType="spiritray.common.pojo.PO.Store">
+        SELECT
+            store.close_cause,
+            store.close_date,
+            store.close_day
+        FROM store
+        WHERE
+            store_id = #{storeId}
+            AND
+            `status` = 0
+    </select>
+
+    <select id="selectCountInCheckCommodity" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM commodity
+        WHERE commodity.store_id = #{storeId}
+              AND
+              commodity.status_code = 0
+    </select>
+
+    <select id="selectAllNoSellCommodityIdByStoreId" resultType="spiritray.common.pojo.PO.Commodity">
+        SELECT *
+        FROM commodity
+        WHERE store_id = #{storeId}
+              AND status_code = -1
+    </select>
+
+    <select id="selectInSellCommodityIdsByStoreId" resultType="java.lang.String">
+        SELECT commodity.commodity_id
+        FROM commodity
+        WHERE store_id = #{storeId}
+              AND status_code = 1
+    </select>
+</mapper>

@@ -64,7 +64,6 @@ public class CommodityServiceImp implements CommodityService {
 
     private String orderUrl = "http://localhost:8082";
 
-
     @SneakyThrows
     @Transactional
     @Override
@@ -159,6 +158,9 @@ public class CommodityServiceImp implements CommodityService {
                 }
                 case 1: {
                     return new RpsMsg().setStausCode(200).setData(commodityMapper.selectInSellDetailByCommodityId(commodityId));
+                }
+                case -1: {
+                    return new RpsMsg().setStausCode(200).setData(commodityMapper.selectNoSellDetailByCommodityId(commodityId));
                 }
                 default: {
                     return new RpsMsg().setStausCode(300).setMsg("无信息");

@@ -32,6 +32,17 @@ public class StoreOrderController {
     @Autowired
     private OrderDetailMapper orderDetailMapper;
 
+    /*检测指定店铺是否有未完成-分别是已付款到未确认收货之间状态的的订单*/
+    @GetMapping("/check/over/{storeId}")
+    public RpsMsg checkStoreNoneNoOverOrder(@PathVariable String storeId) {
+        if (orderDetailMapper.selectCountNoOverOrder(storeId) == 0) {
+            //如果没有未完成的订单就返回true
+            return new RpsMsg().setStausCode(200).setData(true);
+        } else {
+            return new RpsMsg().setStausCode(200).setData(false);
+        }
+    }
+
     /*获当前会话的店铺信息
      * @param session 会话
      * @param keyWord 订单编号或者关键字
@@ -149,4 +160,6 @@ public class StoreOrderController {
         }
         return null;
     }
+
+
 }

@@ -1,5 +1,6 @@
 package spiritray.consumer.controller;
 
+import cn.hutool.json.JSONUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import spiritray.common.pojo.DTO.RpsMsg;
@@ -7,6 +8,7 @@ import spiritray.common.pojo.PO.CommodityCollection;
 import spiritray.consumer.mapper.CollectionMapper;
 
 import javax.servlet.http.HttpSession;
+import java.util.List;
 
 /**
  * ClassName:Collection
@@ -21,6 +23,22 @@ import javax.servlet.http.HttpSession;
 public class CollectionController {
     @Autowired
     private CollectionMapper collectionMapper;
+
+    /*获取买家商品收藏信息*/
+    @GetMapping("/consumer/all")
+    public RpsMsg getConsumerAllCollection(HttpSession session) {
+        return new RpsMsg().setStausCode(200).setData(collectionMapper.selectAllCollection((Long) session.getAttribute("phone")));
+    }
+
+    /*批量删除收藏信息*/
+    @PutMapping("/many/delete")
+    public RpsMsg deleteManyCollection(String commodityIds, HttpSession session) {
+        List<String> ids = JSONUtil.toList(commodityIds, String.class);
+        ids.stream().peek(s -> {
+            collectionMapper.deleteCollectionOne(new CommodityCollection().setCommodityId(s).setConsumerPhone((Long) session.getAttribute("phone")));
+        }).count();
+        return new RpsMsg().setStausCode(200).setMsg("移除成功");
+    }
 
     /*平台拿取商品收藏信息*/
     @GetMapping("/plat/{phone}")
@@ -42,8 +60,7 @@ public class CollectionController {
 
     /*修改收藏状态，1收藏，0取消收藏*/
     @PutMapping("/simple")
-    public RpsMsg putCollection(String commodityId,int state, HttpSession session) {
-        System.out.println(session.getAttribute("phone"));
+    public RpsMsg putCollection(String commodityId, int state, HttpSession session) {
         if (session.getAttribute("phone") == null) {
             return new RpsMsg().setStausCode(400).setMsg("还没有登录");
         }

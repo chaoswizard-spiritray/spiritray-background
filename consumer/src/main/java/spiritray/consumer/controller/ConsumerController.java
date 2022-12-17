@@ -164,17 +164,17 @@ public class ConsumerController {
 
     /*找回密码*/
     @PostMapping("/info/backpassword")
-    public RpsMsg backPassward(String params) {
-        JSONObject jsonObject = JSON.parseObject(params);
-        System.out.println(redisTemplate.opsForHash().entries("emailCodes"));
-        System.out.println(jsonObject.get("email"));
-        MsgCode realCode = (MsgCode) redisTemplate.opsForHash().get("emailCodes", jsonObject.get("email"));
-        if (realCode == null || (!CodeTool.isLive(realCode, String.valueOf(jsonObject.get("code")))) || (!realCode.equals(jsonObject.get("code")))) {
-            redisTemplate.opsForHash().delete("emailCodes", jsonObject.get("email"));
+    public RpsMsg backPassward(long phone,String email,String password,String code) {
+
+        System.out.println(email+code);
+        MsgCode realCode = (MsgCode) redisTemplate.opsForHash().get("emailCodes", email);
+        System.out.println(redisTemplate.opsForHash().get("emailCodes", email));
+        if (realCode == null || (!CodeTool.isLive(realCode, code))) {
+            redisTemplate.opsForHash().delete("emailCodes", email);
             return new RpsMsg().setStausCode(300).setMsg("设置失败，验证码无效");
         }
-        redisTemplate.opsForHash().delete("emailCodes", jsonObject.get("email"));
-        return consumerService.modifyConsumer(new Consumer().setConsumerPhone((Long) jsonObject.get("phone")).setConsumerPassword(new String(MD5.create().digest(String.valueOf(jsonObject.get("email"))))));
+        redisTemplate.opsForHash().delete("emailCodes", email);
+        return consumerService.modifyConsumer(new Consumer().setConsumerPhone(phone).setConsumerPassword(new String(MD5.create().digest(password))));
     }
 
     /*查询收货地址*/

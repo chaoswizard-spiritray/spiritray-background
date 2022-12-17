@@ -38,52 +38,74 @@
 
     <!--这里我们先得到是两类对话数据，一条是我们发送给对方的最新的，一条是他们发送给我们的最新的，然后我们还需要选出两者中最新的那条-->
     <select id="selectMsgHomeInfoByReceiver" resultType="spiritray.common.pojo.DTO.MsgHomeInfo">
-        SELECT *
-        FROM
+        <if test="receiver==0">
+            SELECT
+            msg.sender,
+            msg.sender_role,
+            msg.msg AS lastest_msg,
+            msg.msg_type AS lastest_msg_type,
+            msg.is_read AS lastest_msg_is_read,
+            msg.send_date AS lastest_msg_date
+            FROM
+            (
+            SELECT *
+            FROM msg
+            WHERE msg.is_delete = 0
+            AND
+            msg.receiver = #{receiver}
+            AND
+            receiver_role = #{role}
+            ORDER BY sender, send_date DESC
+            ) msg
+            GROUP BY msg.sender
+        </if>
+        <if test="receiver!=0">
+            SELECT *
+            FROM
             (SELECT *
-             FROM
-                 ((SELECT
-                       msg.receiver      AS sender,
-                       msg.receiver_role AS sender_role,
-                       msg.msg           AS lastest_msg,
-                       msg.msg_type      AS lastest_msg_type,
-                       msg.is_read       AS lastest_msg_is_read,
-                       msg.send_date     AS lastest_msg_date
-                   FROM
-                       (
-                           SELECT *
-                           FROM msg
-                           WHERE msg.is_delete = 0
-                                 AND
-                                 msg.sender = #{receiver}
-                                 AND
-                                 sender_role = #{role}
-                           ORDER BY receiver, send_date DESC
-                       ) msg
-                   GROUP BY msg.receiver)
-                  UNION
-                  (SELECT
-                       msg.sender,
-                       msg.sender_role,
-                       msg.msg       AS lastest_msg,
-                       msg.msg_type  AS lastest_msg_type,
-                       msg.is_read   AS lastest_msg_is_read,
-                       msg.send_date AS lastest_msg_date
-                   FROM
-                       (
-                           SELECT *
-                           FROM msg
-                           WHERE msg.is_delete = 0
-                                 AND
-                                 msg.receiver = #{receiver}
-                                 AND
-                                 receiver_role = #{role}
-                           ORDER BY sender, send_date DESC
-                       ) msg
-                   GROUP BY msg.sender)) m
-             ORDER BY m.sender, m.lastest_msg_date DESC) o
-        GROUP BY o.sender
-
+            FROM
+            ((SELECT
+            msg.receiver AS sender,
+            msg.receiver_role AS sender_role,
+            msg.msg AS lastest_msg,
+            msg.msg_type AS lastest_msg_type,
+            msg.is_read AS lastest_msg_is_read,
+            msg.send_date AS lastest_msg_date
+            FROM
+            (
+            SELECT *
+            FROM msg
+            WHERE msg.is_delete = 0
+            AND
+            msg.sender = #{receiver}
+            AND
+            sender_role = #{role}
+            ORDER BY receiver, send_date DESC
+            ) msg
+            GROUP BY msg.receiver)
+            UNION
+            (SELECT
+            msg.sender,
+            msg.sender_role,
+            msg.msg AS lastest_msg,
+            msg.msg_type AS lastest_msg_type,
+            msg.is_read AS lastest_msg_is_read,
+            msg.send_date AS lastest_msg_date
+            FROM
+            (
+            SELECT *
+            FROM msg
+            WHERE msg.is_delete = 0
+            AND
+            msg.receiver = #{receiver}
+            AND
+            receiver_role = #{role}
+            ORDER BY sender, send_date DESC
+            ) msg
+            GROUP BY msg.sender)) m
+            ORDER BY m.sender, m.lastest_msg_date DESC) o
+            GROUP BY o.sender
+        </if>
     </select>
 
     <select id="selectMsgBySenderAndPage" resultType="spiritray.common.pojo.PO.Msg">

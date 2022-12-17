@@ -22,6 +22,15 @@ import java.util.Map;
 @Mapper
 @Repository
 public interface OrderDetailMapper {
+    /*查询指定店铺下的已付款、已发货的订单数目*/
+    public int selectCountNoOverOrder(@Param("storeId")String storeId);
+
+    /*查询指定订单细节编号的商品id*/
+    public List<String> selectCommodityIdsByOrderNumberAndOdId(@Param("orderNumber") String orderNumber, @Param("odId") int odId);
+
+    /*查询指定主订单号的所有子订单商品id*/
+    public List<String> selectCommodityIdsByOrderNumber(@Param("orderNumber") String orderNumber);
+
     /*查询指定用户所有订单的商品id*/
     public List<String> selectAllOrderCommodityIdByPhone(@Param("phone") long phone);
 

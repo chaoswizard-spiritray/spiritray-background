@@ -1,8 +1,10 @@
 package spiritray.order.service.imp;
 
 import cn.hutool.core.lang.UUID;
+import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import lombok.SneakyThrows;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,12 +33,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * ClassName:OrderServiceImp
@@ -109,6 +109,11 @@ public class OrderServiceImp implements OrderService {
             //不存在就返回错误
             return new RpsMsg().setStausCode(300).setMsg("无效订单");
         }
+        //先检测下商品是否都在售
+        if(!checkCommodityState(commodities)){
+            //如果没有在售
+            return new RpsMsg().setStausCode(300).setMsg("无法下单，存在商品已下架");
+        }
         //获取有效地址信息
         headers.add("jwt", jwt);
         MultiValueMap multiValueMap = new LinkedMultiValueMap();
@@ -143,6 +148,11 @@ public class OrderServiceImp implements OrderService {
         List<CheckOrderInfo> checkOrderInfos = JSONObject.parseArray(JSON.toJSONString(responseEntity.getBody().getData())).toJavaList(CheckOrderInfo.class);
         if (checkOrderInfos.size() != commodities.size()) {
             return new RpsMsg().setMsg("商品信息不存在");
+        }
+        //再验证下商品是否都在售
+        if(!checkCommodityState(commodities)){
+            //如果没有在售
+            return new RpsMsg().setStausCode(300).setMsg("无法下单，存在商品已下架");
         }
         //减少商品指定规格数量
         responseEntity = restTemplate.exchange(SELLER_URL + "/sku/sub", HttpMethod.PUT, httpEntity, RpsMsg.class);
@@ -186,6 +196,21 @@ public class OrderServiceImp implements OrderService {
                 //返回下单失败
                 return new RpsMsg().setMsg("下单失败").setStausCode(200);
             }
+        }
+    }
+
+    //批量检测商品状态是否都是在售中
+    private boolean checkCommodityState(List<OrderBeforeCommodity> commodities) {
+        try {
+            List<String> commodityIds = commodities.stream().map(OrderBeforeCommodity::getCommodityId).collect(Collectors.toList());
+            RpsMsg rpsMsg = restTemplate.getForObject(SELLER_URL + "/commodity/check/state?commodityIds=" + JSONUtil.toJsonStr(commodityIds), RpsMsg.class);
+            if (rpsMsg.getData() == null) {
+                return false;
+            } else {
+                return (Boolean) rpsMsg.getData() ? true : false;
+            }
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -240,13 +265,26 @@ public class OrderServiceImp implements OrderService {
         }
     }
 
-    @Transactional(rollbackFor = IllegalArgumentException.class)
+    @SneakyThrows
+    @Transactional(rollbackFor = Exception.class)
     @Override
-    public RpsMsg chanelOrderDetail(HttpServletResponse response, String orderNumber, int odId, long phone, String jwt) {
+    public RpsMsg chanelOrderDetail(HttpServletResponse response, String orderNumber, int odId, long phone, String jwt) throws Exception {
         //先删除指定订单细节记录
         int rowNum = orderDetailMapper.updateDetailDeleteByIdAndPhone(orderNumber, odId, phone);
         if (rowNum != 1) {
             return new RpsMsg().setMsg("系统繁忙").setStausCode(300);
+        }
+        //修改商品数量
+        Map param = orderDetailMapper.selectOrderSkuByOrderId(orderNumber, odId);
+        MultiValueMap multiValueMap1 = new LinkedMultiValueMap();
+        multiValueMap1.add("commodityId", param.get("commodityId"));
+        multiValueMap1.add("skuValue", param.get("skuValue"));
+        multiValueMap1.add("num", param.get("num"));
+        HttpEntity httpEntity = new HttpEntity(multiValueMap1, new HttpHeaders());
+        RpsMsg rpsMsg1 = restTemplate.exchange("http://localhost:8081/sku/add", HttpMethod.PUT, httpEntity, RpsMsg.class).getBody();
+        //如果增加失败直接回滚
+        if (rpsMsg1.getStausCode() == 300) {
+            throw new Exception();
         }
         //如果修改成功,调用退款接口
         headers.add("jwt", jwt);

@@ -13,6 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * ClassName:ThreaPoolConfig
@@ -41,6 +44,24 @@ public class ThreadPoolConfig {
     @Bean("transferFail")
     public List<SSMap> getTransferTask() {
         return Collections.synchronizedList(new ArrayList<>());
+    }
+
+    //sku增减数量锁
+    @Bean("skuLock")
+    public Lock getSkuLock() {
+        return new ReentrantLock();
+    }
+
+    //sku增加数量锁对象
+    @Bean("skuLockAddCondition")
+    public Condition getAddSkuCondition() {
+        return getSkuLock().newCondition();
+    }
+
+    //sku减数量锁对象
+    @Bean("skuLockSubCondition")
+    public Condition getSubSkuCondition() {
+        return getSkuLock().newCondition();
     }
 
     //任务执行线程池，主要用于处理系统中的异步任务

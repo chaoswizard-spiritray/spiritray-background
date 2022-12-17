@@ -2,6 +2,8 @@ package spiritray.seller.service;
 
 import spiritray.common.pojo.DTO.RpsMsg;
 
+import java.util.Map;
+
 /**
  * ClassName:ConsumerCommodityService
  * Package:spiritray.seller.service
@@ -18,5 +20,5 @@ public interface ConsumerCommodityService {
     public RpsMsg queryConsumerCommodityDetail(String commodityId);
 
     /*查询买家搜索商品信息*/
-    public RpsMsg queryConsumerCommoditySearch(String word);
+    public RpsMsg queryConsumerCommoditySearch(String word, int pageNo, int pageNum, Map params);
 }

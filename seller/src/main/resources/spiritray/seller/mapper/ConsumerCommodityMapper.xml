@@ -87,91 +87,69 @@
                 ON g.commodity_id = h.commodity_id
     </sql>
 
+    <sql id="select_commodity_in_brands">
+        SELECT commodity.commodity_id, commodity.master_map,commodity.commodity_name
+        FROM commodity JOIN cav JOIN attribute
+        ON commodity.commodity_id=cav.commodity_id
+        AND cav.attribute_id=attribute.attribute_commodity_idid
+        WHERE attribute.attribute_name='品牌'
+        AND
+        commodity.status_code=1
+        AND cav.attribute_value IN
+        <foreach collection="brands" item="brand" open="(" close=")" separator=",">
+            #{brand}
+        </foreach>
+    </sql>
+
+    <sql id="select_commodity_in_id">
+        SELECT * FROM (
+        <foreach collection="ids" item="id" open="(" close=")" separator="UNION">
+            (
+            SELECT commodity.commodity_id
+            FROM commodity
+            WHERE
+            commodity.status_code=1
+            AND commodity.commodity_id=#{id}
+            )
+        </foreach>
+        )s
+    </sql>
+
     <select id="selectHomeCommoditySimpleOrderByfavorableRate"
             resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
         SELECT i.*, commodity.master_map, commodity.commodity_name
         FROM
         commodity JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
         ON commodity.commodity_id= i.commodity_id
+        WHERE
+        commodity.status_code=1
         ORDER BY i.favorable_rate DESC
         LIMIT #{pageNum},#{recordNum}
     </select>
 
     <select id="selectHomeCommoditySimpleOrderByfavorableRateByCommodityIds"
             resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
-        SELECT
-        resu.*,
-        MIN(sku.sku_price) AS price_min,
-        MAX(sku.sku_price) AS price_max
-        FROM
-        (SELECT
-        commodity.commodity_id,
-        commodity.commodity_name,
-        commodity.master_map,
-        good_rate.favorable_rate
-        FROM
-        (SELECT
-        good.commodity_id,
-        good.cm_num / total.cm_num AS favorable_rate
-        FROM
-        (
-        (SELECT
-        cd.commodity_id,
-        COUNT(*) AS cm_num
-        FROM
-        (SELECT commodity_id
-        FROM
-        commodity
-        WHERE category_id IN
-        (
-        SELECT category_id
-        FROM
-        commodity
-        WHERE commodity_id IN (
-        <foreach collection="commodityIds" separator="," item="commodityId">
-            #{commodityId}
-        </foreach>)
-        )) AS cd LEFT JOIN `comment` AS cm
-        ON
-        cd.commodity_id = cm.commodity_id
+        SELECT DISTINCT i.*, commodity.master_map, commodity.commodity_name
+        FROM commodity
+        JOIN check_info
+        JOIN sku
+        JOIN attribute
+        JOIN cav
+        JOIN (<include
+            refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id = check_info.commodity_id
+        AND
+        commodity.commodity_id = sku.commodity_id
+        AND
+        attribute.attribute_name = '品牌'
+        AND
+        commodity.commodity_id = cav.commodity_id
+        AND
+        commodity.commodity_id = i.commodity_id
         WHERE
-        star_level IS NULL OR star_level > 3
-        GROUP BY cd.commodity_id
-        ) good
-        JOIN
-        (SELECT
-        cd.commodity_id,
-        COUNT(*) AS cm_num
-        FROM
-        (SELECT commodity_id
-        FROM
-        commodity
-        WHERE category_id IN
-        (
-        SELECT category_id
-        FROM
-        commodity
-        WHERE commodity_id IN (
-        <foreach collection="commodityIds" separator="," item="commodityId">
-            #{commodityId}
-        </foreach>)
-        )) AS cd LEFT JOIN `comment` AS cm
-        ON
-        cd.commodity_id = cm.commodity_id
-        GROUP BY cd.commodity_id
-        ) total
-        ON good.commodity_id = total.commodity_id
-        )
-        ) good_rate
-        JOIN commodity
-        JOIN sku
-        ON
-        good_rate.commodity_id = commodity.commodity_id
-        ORDER BY good_rate.favorable_rate
-        LIMIT #{pageNum}, #{recordNum}) AS resu
-        JOIN sku
-        ON resu.commodity_id = sku.commodity_id
-        GROUP BY resu.commodity_id;
+        commodity.commodity_id IN
+        (<include refid="select_commodity_in_id"></include>)
+        <include refid="extra_condition"></include>
     </select>
 
     <select id="selectCommodityShopByCommodityId" resultType="spiritray.common.pojo.DTO.CommodityShop">
@@ -189,6 +167,7 @@
                 ON co.commodity_id = sku.commodity_id
         WHERE
             co.commodity_id = #{commodityId}
+            AND co.status_code = 1
     </select>
 
     <select id="selectHomeCommoditySimpleOrderByfavorableRateByTypes"
@@ -221,5 +200,242 @@
             resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
 
     </select>
-    <select id="selectCategoryIdByToken" resultType="java.lang.Integer"></select>
+
+
+    <sql id="extra_condition">
+        <if test="params!=null">
+            <if test="params.checkDate!=null">
+                AND
+                <![CDATA[ DATEDIFF(NOW(),check_info.check_date) <= #{params.checkDate}]]>
+            </if>
+            <if test="params.priceFloor!=null">
+                AND
+                <![CDATA[sku.sku_price >= #{params.priceFloor} ]]>
+            </if>
+            <if test="params.priceCeil!=null">
+                AND
+                <![CDATA[sku.sku_price <= #{params.priceCeil}]]>
+            </if>
+            <if test="params.shipAddress!=null">
+                AND
+                commodity.address LIKE "%${params.shipAddress}%"
+            </if>
+            <if test="params.cate!=null">
+                AND
+                commodity.category_id =#{params.cate}
+            </if>
+            <if test="params.brand!=null">
+                AND
+                cav.attribute_value= #{params.brand}
+            </if>
+            <if test="params.reorder!=null and params.reorder.equals('checkDate')">
+                ORDER BY check_info.check_date
+            </if>
+            <if test="params.reorder!=null and params.reorder.equals('price')">
+                ORDER BY sku.sku_price
+            </if>
+        </if>
+    </sql>
+
+    <select id="selectCommodityIdAndNameByTokens" resultType="spiritray.common.pojo.DTO.SSMap">
+        SELECT DISTINCT
+        commodity.commodity_id AS attribute_name,
+        commodity.commodity_name AS attribute_value
+        FROM commodity
+        JOIN check_info
+        JOIN sku
+        JOIN attribute
+        JOIN cav
+        JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id = check_info.commodity_id
+        AND
+        commodity.commodity_id = sku.commodity_id
+        AND
+        attribute.attribute_name = '品牌'
+        AND
+        commodity.commodity_id = cav.commodity_id
+        AND
+        commodity.commodity_id = i.commodity_id
+        WHERE
+        commodity.status_code = 1
+        AND
+        commodity_name REGEXP #{regexp}
+        <include refid="extra_condition"></include>
+        <if test="params!=null and params.reorder!=null and params.reorder.equals('favorableRate')">
+            ORDER BY i.favorableRate DESC
+        </if>
+    </select>
+
+    <select id="selectHomeCommoditySimpleOrderByfavorableRateByBrands"
+            resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+        SELECT i.*, temp.master_map, temp.commodity_name
+        FROM (<include refid="select_commodity_in_brands"></include>)temp JOIN (<include
+            refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON temp.commodity_id= i.commodity_id
+        ORDER BY i.favorable_rate DESC
+        LIMIT #{pageNum},#{recordNum}
+    </select>
+
+    <sql id="token_fliter_contion">
+        (
+        SELECT commodity.commodity_id
+        FROM commodity JOIN attribute JOIN cav
+        ON
+        attribute.attribute_id=cav.attribute_id
+        AND
+        commodity.commodity_id=cav.commodity_id
+        AND
+        attribute.attribute_name='品牌'
+        WHERE
+        commodity.commodity_name REGEXP #{regexp}
+        <if test="cates!=null">
+            AND
+            commodity.category_id IN
+            <foreach collection="cates" open="(" close=")" separator="," item="cate">
+                #{cate}
+            </foreach>
+        </if>
+        <if test="brands!=null">
+            AND
+            cav.attribute_value IN
+            <foreach collection="brands" open="(" close=")" separator="," item="brand">
+                #{brand}
+            </foreach>
+        </if>
+        )
+    </sql>
+
+    <select id="selectTokenFliterDataPriceMax" resultType="java.lang.Float">
+        SELECT sku.sku_price AS max_price
+        FROM commodity
+        JOIN sku
+        ON commodity.commodity_id = sku.commodity_id
+        WHERE
+        commodity.status_code=1
+        AND
+        commodity.commodity_id IN
+        <include refid="token_fliter_contion"></include>
+        ORDER BY sku.sku_price DESC
+        LIMIT 0, 1;
+    </select>
+
+    <select id="selectTokenFliterDataPriceMin" resultType="java.lang.Float">
+        SELECT sku.sku_price AS min_price
+        FROM commodity
+        JOIN sku
+        ON commodity.commodity_id = sku.commodity_id
+        WHERE
+        commodity.status_code=1
+        AND
+        commodity.commodity_id IN
+        <include refid="token_fliter_contion"></include>
+        ORDER BY sku.sku_price
+        LIMIT 0, 1;
+    </select>
+
+    <select id="selectTokenFliterxDataAddress" resultType="java.lang.String">
+        SELECT commodity.address
+        FROM commodity
+        WHERE
+        commodity.status_code=1
+        AND
+        commodity.commodity_id IN
+        <include refid="token_fliter_contion"></include>
+        GROUP BY commodity.address;
+    </select>
+
+    <select id="selectTokenFliterDataCates" resultType="spiritray.common.pojo.DTO.SNMap">
+        SELECT
+        category.category_id AS `value`,
+        category.category_name AS `key`
+        FROM commodity
+        JOIN category
+        ON commodity.category_id = category.category_id
+        WHERE
+        commodity.status_code=1
+        AND
+        commodity.commodity_id IN
+        <include refid="token_fliter_contion"></include>
+        GROUP BY category.category_id;
+    </select>
+
+    <select id="selectTokenFliterDataBrands" resultType="java.lang.String">
+        SELECT DISTINCT cav.attribute_value
+        FROM commodity
+        JOIN attribute
+        JOIN cav
+        ON
+        attribute.attribute_id = cav.attribute_id
+        AND
+        commodity.commodity_id = cav.commodity_id
+        AND
+        attribute.attribute_name = '品牌'
+        WHERE
+        commodity.status_code=1
+        AND
+        commodity.commodity_id IN
+        <include refid="token_fliter_contion"></include>
+    </select>
+
+    <select id="selectHomeCommoditySimpleTokenByParamsByTypes"
+            resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+        SELECT DISTINCT i.*, commodity.master_map, commodity.commodity_name
+        FROM commodity
+        JOIN check_info
+        JOIN sku
+        JOIN attribute
+        JOIN cav
+        JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id = check_info.commodity_id
+        AND
+        commodity.commodity_id = sku.commodity_id
+        AND
+        attribute.attribute_name = '品牌'
+        AND
+        commodity.commodity_id = cav.commodity_id
+        AND
+        commodity.commodity_id = i.commodity_id
+        WHERE
+        commodity.category_id IN
+        <foreach collection="types" item="type" open="(" close=")" separator=",">
+            #{type}
+        </foreach>
+        AND
+        commodity.status_code=1
+        <include refid="extra_condition"></include>
+        <if test="params!=null and params.reorder!=null and params.reorder.equals('favorableRate')">
+            ORDER BY i.favorableRate DESC
+        </if>
+    </select>
+
+    <select id="selectHomeCommoditySimpleTokenByParamsByBrands"
+            resultType="spiritray.common.pojo.DTO.HomeCommoditySimple">
+        SELECT DISTINCT i.*, commodity.master_map, commodity.commodity_name
+        FROM commodity
+        JOIN check_info
+        JOIN sku
+        JOIN attribute
+        JOIN cav
+        JOIN (<include refid="favorableRateAndMinAndMaxPrice"></include>)i
+        ON commodity.commodity_id = check_info.commodity_id
+        AND
+        commodity.commodity_id = sku.commodity_id
+        AND
+        attribute.attribute_name = '品牌'
+        AND
+        commodity.commodity_id = cav.commodity_id
+        AND
+        commodity.commodity_id = i.commodity_id
+        WHERE
+        cav.attribute_value IN
+        <foreach collection="brands" item="brand" open="(" close=")" separator=",">
+            #{brand}
+        </foreach>
+        AND
+        commodity.status_code=1
+        <include refid="extra_condition"></include>
+        <if test="params!=null and params.reorder!=null and params.reorder.equals('favorableRate')">
+            ORDER BY i.favorableRate DESC
+        </if>
+    </select>
 </mapper>

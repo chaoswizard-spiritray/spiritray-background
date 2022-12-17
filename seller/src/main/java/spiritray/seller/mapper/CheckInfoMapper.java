@@ -20,6 +20,9 @@ public interface CheckInfoMapper {
     /*插入指定商品默认检查信息*/
     public int insertCheckInfo(@Param("commodityId") String commodityId);
 
+    /*修改指定商品的商品的审核状态*/
+    public int updateCheckInfoCodeAndClear(@Param("commodityId") String commodityId);
+
     /*修改商品检测信息*/
     public int updateCheckInfo(@Param("checkinfo") CheckInfo checkInfo);
 
