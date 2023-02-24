@@ -165,6 +165,12 @@ public class PullMesController {
                             }
                         }
                     }
+                    //将系统消息删除并重新获取
+                    msgHomeInfos = msgHomeInfos.stream().filter(s -> s.getSender() != 0).collect(Collectors.toList());
+                    MsgHomeInfo systemMsg = msgMapper.selectSysytemMsgHomeInfoByReceiver(receiver, role);
+                    if (systemMsg != null) {
+                        msgHomeInfos.add(systemMsg);
+                    }
                     //排序将系统放在最前面，其他按照未读、时间优先级进行排序
                     msgHomeInfos.sort(comparator);
                     return new RpsMsg().setData(msgHomeInfos).setMsg("查询成功").setStausCode(200);
@@ -182,6 +188,12 @@ public class PullMesController {
                             }
                         }
                     }
+                    //将系统消息删除并重新获取
+                    msgHomeInfos = msgHomeInfos.stream().filter(s -> s.getSender() != 0).collect(Collectors.toList());
+                    MsgHomeInfo systemMsg = msgMapper.selectSysytemMsgHomeInfoByReceiver(receiver, role);
+                    if (systemMsg != null) {
+                        msgHomeInfos.add(systemMsg);
+                    }
                     msgHomeInfos.sort(comparator);
                     return new RpsMsg().setData(msgHomeInfos).setMsg("查询成功").setStausCode(200);
                 }
@@ -193,10 +205,18 @@ public class PullMesController {
     }
 
     /*当前会话用户获取指定发送者的消息*/
-    @GetMapping("/{sender}/{pageNo}/{pageNum}")
-    public RpsMsg getSenderMsg(HttpSession session, @PathVariable Long sender, @PathVariable Integer pageNo,
+    @GetMapping("/{sender}/{receiverRole}/{pageNo}/{pageNum}")
+    public RpsMsg getSenderMsg(HttpSession session, @PathVariable Long sender, @PathVariable int receiverRole, @PathVariable Integer pageNo,
                                @PathVariable int pageNum) {
         List<Msg> temp = msgMapper.selectMsgBySenderAndPage((Long) session.getAttribute("phone"), sender, pageNo * pageNum, pageNum);
+        if (receiverRole != 0) {
+            //过滤一下系统消息
+            //拿到符合要求的系统消息
+            List<Msg> sysMsg = temp.stream().filter(s -> s.getSender() == 0 && s.getReceiverRole() == receiverRole).collect(Collectors.toList());
+            //剔出系统消息
+            temp = temp.stream().filter(s -> s.getSender() != 0).collect(Collectors.toList());
+            temp.addAll(sysMsg);
+        }
         temp.sort(new Comparator<Msg>() {
             @Override
             public int compare(Msg o1, Msg o2) {

@@ -125,4 +125,28 @@
         ORDER BY send_date DESC
         LIMIT #{pageNo}, #{pageNum}
     </select>
+
+    <select id="selectSysytemMsgHomeInfoByReceiver" resultType="spiritray.common.pojo.DTO.MsgHomeInfo">
+        SELECT
+            msg.sender,
+            msg.sender_role,
+            msg.msg       AS lastest_msg,
+            msg.msg_type  AS lastest_msg_type,
+            msg.is_read   AS lastest_msg_is_read,
+            msg.send_date AS lastest_msg_date
+        FROM
+            (
+                SELECT *
+                FROM msg
+                WHERE msg.is_delete = 0
+                      AND
+                      msg.receiver = #{receiver}
+                      AND
+                      receiver_role = #{role}
+                      AND
+                      sender_role = 0
+                ORDER BY send_date DESC
+            ) msg
+        GROUP BY msg.sender
+    </select>
 </mapper>

@@ -146,7 +146,7 @@ public class CommentServiceImp implements CommentService {
                                 .setCommentContent(comment.getCommentContent())
                                 .setCommentNo(comment.getCommentNo())
                                 .setConsumerHead("/static/comment/head/default.png")
-                                .setConsumerNickname("匿名")
+                                .setConsumerNickname("匿名用户")
                                 .setSkuValue(skus.get(comment.getOrderNumber() + comment.getOdId()))
                                 .setStarLevel(comment.getStarLevel())
                                 .setStartDate(comment.getStartDate())

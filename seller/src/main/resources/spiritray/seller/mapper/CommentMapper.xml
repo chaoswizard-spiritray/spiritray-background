@@ -5,17 +5,17 @@
         -- 最近七天的评论
         <if test="type==1">
             AND
-            <![CDATA[ TIMESTAMPDIFF(DAY,NOW(),start_date)<=7 ]]>
+            <![CDATA[ TIMESTAMPDIFF(DAY,start_date,NOW())<=7 ]]>
         </if>
         -- 星级大于等于3为好评
         <if test="type==2">
             AND
-            <![CDATA[  star_level>=3 ]]>
+            <![CDATA[star_level>=3 ]]>
         </if>
         -- 星级小于3为差评
         <if test="type==3">
             AND
-            <![CDATA[  star_level < 3 ]]>
+            <![CDATA[ star_level < 3 ]]>
         </if>
         -- 附图不为空
         <if test="type==4">
@@ -24,7 +24,7 @@
         </if>
         -- 按买家电话分组，并且评论数目大于1的说明多次购买
         <if test="type==5">
-            GROUP BY `comment`.consumer_phone
+            GROUP BY consumer_phone
             <![CDATA[ HAVING COUNT(*)>1 ]]>
         </if>
     </sql>
@@ -57,7 +57,10 @@
 
     <select id="selectCommentByCommodityIdAndTypeAndPageSeaparate"
             resultType="spiritray.common.pojo.PO.Comment">
+        SELECT * FROM
+        (
         SELECT
+        commodity_id,
         comment_no,
         comment_content,
         is_anonymous,
@@ -71,7 +74,11 @@
         `comment`
         WHERE
         commodity_id = #{commodityId}
-        <include refid="typeCondition"></include>
+        ORDER BY `comment`.start_date DESC
+        )tt
+        WHERE
+        commodity_id = #{commodityId}
+            <include refid="typeCondition"></include>
         LIMIT #{pageNo},#{pageNum}
     </select>
 

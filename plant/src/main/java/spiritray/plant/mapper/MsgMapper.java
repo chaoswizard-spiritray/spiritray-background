@@ -19,6 +19,8 @@ import java.util.List;
 @Mapper
 @Repository
 public interface MsgMapper {
+    /*查询指定接收者及角色的首页展示系统消息*/
+    public  MsgHomeInfo selectSysytemMsgHomeInfoByReceiver(@Param("receiver") Long receiver, @Param("role") Integer role);
     /*查询消息首页展示的数据MsgHomeInfo*/
     public List<MsgHomeInfo> selectMsgHomeInfoByReceiver(@Param("receiver") Long receiver, @Param("role") Integer role);
 

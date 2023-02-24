@@ -118,7 +118,8 @@ public class OrderServiceImp implements OrderService {
         headers.add("jwt", jwt);
         MultiValueMap multiValueMap = new LinkedMultiValueMap();
         HttpEntity httpEntity = new HttpEntity(multiValueMap, headers);
-        List<Address> checkAddresses = (List<Address>) restTemplate.exchange(CONSUMER_URL + "/consumer/info/addresses", HttpMethod.GET, httpEntity, RpsMsg.class).getBody().getData();
+        RpsMsg tempMsg=restTemplate.exchange(CONSUMER_URL + "/consumer/info/addresses", HttpMethod.GET, httpEntity, RpsMsg.class).getBody();
+        List<Address> checkAddresses = (List<Address>)tempMsg.getData();
         checkAddresses = JSONObject.parseArray(JSON.toJSONString(checkAddresses)).toJavaList(Address.class);
         boolean isAccess = false;
         for (int i = 0; i < checkAddresses.size(); i++) {
